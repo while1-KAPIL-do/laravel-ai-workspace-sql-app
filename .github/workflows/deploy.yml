@@ -23,12 +23,15 @@ jobs:
             docker-compose down
             docker-compose up -d --build
 
-            # wait for containers to be ready
-            sleep 10
+            echo "⏳ Waiting for MySQL..."
 
-            # run migrations
-            docker exec sql_ai_app php artisan migrate --force
+            # wait until MySQL is ready
+            for i in {1..30}; do
+              docker exec laravel_ai_mysql mysqladmin ping -h"localhost" --silent && break
+              echo "Waiting for MySQL... ($i)"
+              sleep 2
+            done
 
-            # optional (fix sessions issue permanently)
-            docker exec sql_ai_app php artisan session:table || true
+            echo "🚀 Running migrations..."
+
             docker exec sql_ai_app php artisan migrate --force
