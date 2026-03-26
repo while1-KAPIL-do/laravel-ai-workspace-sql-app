@@ -73,7 +73,7 @@
         <!-- Header -->
         <div class="text-center mb-12">
             <h1 class="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
-                🎤 SQL AI Voice Assistant
+                SQL AI Voice Assistant
             </h1>
             <p class="text-gray-600 text-lg">Speak naturally or upload a voice file</p>
         </div>
