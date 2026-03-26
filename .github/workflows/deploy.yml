@@ -17,6 +17,18 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd laravel-ai-workspace-sql-app
+
             git pull origin main
+
             docker-compose down
             docker-compose up -d --build
+
+            # wait for containers to be ready
+            sleep 10
+
+            # run migrations
+            docker exec sql_ai_app php artisan migrate --force
+
+            # optional (fix sessions issue permanently)
+            docker exec sql_ai_app php artisan session:table || true
+            docker exec sql_ai_app php artisan migrate --force
