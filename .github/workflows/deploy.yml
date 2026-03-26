@@ -25,13 +25,17 @@ jobs:
 
             echo "⏳ Waiting for MySQL..."
 
-            # wait until MySQL is ready
             for i in {1..30}; do
               docker exec laravel_ai_mysql mysqladmin ping -h"localhost" --silent && break
               echo "Waiting for MySQL... ($i)"
               sleep 2
             done
 
-            echo "🚀 Running migrations..."
+            echo "🔄 Restarting Laravel container..."
+            docker restart sql_ai_app
 
+            echo "🧹 Clearing config cache..."
+            docker exec sql_ai_app php artisan config:clear
+
+            echo "🚀 Running migrations..."
             docker exec sql_ai_app php artisan migrate --force
