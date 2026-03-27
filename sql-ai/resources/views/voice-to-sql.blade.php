@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SQL AI Voice Assistant V2</title>
+    <title>SQL AI Voice Assistant </title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -76,7 +76,7 @@
         <!-- Header -->
         <div class="text-center mb-12">
             <h1 class="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
-                SQL AI Voice Assistant V2
+                SQL AI Voice Assistant
             </h1>
             <p class="text-gray-600 dark:text-gray-300 text-lg">Speak naturally or upload a voice file</p>
         </div>
