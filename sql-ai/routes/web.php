@@ -14,11 +14,30 @@ use Illuminate\Support\Facades\Schema;
 use App\Models\User;
 
 use App\Http\Controllers\VoiceToSqlController;
+use App\Services\Token\PythonTokenizerClient;
 
 Route::post('/voice-to-sql', [VoiceToSqlController::class, 'process'])->name('voice-to-sql');
 Route::get('/voice-to-sql-view', function () {
     return view('voice-to-sql');
 });
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+
+///////////////////////////////// TEST ROUTES /////////////////////////////////
+
+
+Route::get('/test/python-engine/token', function () {
+    $input = "My Name is Kapil";
+
+    $pythonClient = new PythonTokenizerClient();
+    $actual = $pythonClient->getTokens($input);
+
+    return $actual;
+});
+
 
 Route::get('/test-users', function () {
     $users = DB::table('users')
@@ -28,13 +47,6 @@ Route::get('/test-users', function () {
 
                 dd($users->toArray());
 });
-
-Route::get('/', function () {
-    return view('welcome');
-});
-
-
-///////////////////////////////// TEST ROUTES /////////////////////////////////
 
 Route::get('/test-sql-agent', function () {
     $response = (new MySqlExpert)->prompt('Get all users created today');

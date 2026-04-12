@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Ai\Agents\MySqlExpert;
+use App\Services\Token\TokenManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -13,6 +14,10 @@ use Exception;
 
 class VoiceToSqlService
 {
+    public function __construct(
+        protected TokenManager $tokenManager
+    ) {}
+
     public function handleVoiceToSql(Request $request)
     {
         // Validate either uploaded file OR recorded audio
@@ -46,6 +51,14 @@ class VoiceToSqlService
                 throw new Exception('No speech detected in the audio.');
             }
 
+            // TOKEN CHECK STARTS HERE
+            $ip = request()->ip();
+            $tokenResult = $this->tokenManager->validate($userQuestion, $ip);
+            if (!$tokenResult['allowed']) {
+                throw new Exception('Token limit exceeded. Please reduce input size.');
+            }
+
+
             // 3. Generate SQL using dedicated agent
             // $sqlResponse = (new MySqlExpert())->prompt($userQuestion);
             $agent = new MySqlExpert();
@@ -61,6 +74,14 @@ class VoiceToSqlService
             PROMPT;
 
             $sqlResponse = $agent->prompt($fullPrompt);
+            
+            $tokensUsed = $tokenResult['tokens']; // fallback
+            // if your LLM returns usage, use that instead
+            if (is_array($sqlResponse) && isset($sqlResponse['usage']['total_tokens'])) {
+                $tokensUsed = $sqlResponse['usage']['total_tokens'];
+            }
+            $this->tokenManager->record($ip, $tokensUsed);
+
             $sql = trim((string) $sqlResponse);
             $sql = rtrim($sql, ';');
 
