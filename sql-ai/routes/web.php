@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use function Laravel\Ai\agent;
 use App\Agents\SqlGeneratorAgent;
 use App\Ai\Agents\MySqlExpert;
+use App\Http\Controllers\TokenAnalyticsController;
 use Laravel\Ai\Transcription;
 use Laravel\Ai\Audio;
 
@@ -23,6 +24,19 @@ Route::get('/voice-to-sql-view', function () {
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+// Token Dashboard - api.php
+Route::prefix('analytics')->group(function () {
+    Route::get('/summary', [TokenAnalyticsController::class, 'summary']);
+    Route::get('/daily', [TokenAnalyticsController::class, 'daily']);
+    Route::get('/top-ips', [TokenAnalyticsController::class, 'topIps']);
+    Route::get('/top-users', [TokenAnalyticsController::class, 'topUsers']);
+    Route::get('/cost', [TokenAnalyticsController::class, 'cost']);
+});
+
+Route::get('/dashboard/tokens', function () {
+    return view('analytics.dashboard');
 });
 
 
