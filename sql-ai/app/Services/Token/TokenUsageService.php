@@ -7,25 +7,43 @@ use Carbon\Carbon;
 
 class TokenUsageService
 {
-    public function addUsage(string $ip, int $tokens): void
+    
+    public function addUsage(string $ip, int $inputTokens, int $outputTokens, float $cost, string $model = 'gpt-4', string $provider = 'openai'): void
     {
-        $today = Carbon::today()->toDateString();
+        $today = now()->toDateString();
 
-        $usage = TokenUsage::firstOrCreate(
-            ['ip' => $ip, 'date' => $today],
-            ['tokens_used' => 0]
+        $usage = \App\Models\TokenUsage::firstOrCreate(
+            [
+                'ip' => $ip, 
+                'date' => $today,
+                'model' => $model,
+                'provider' => $provider
+            ],
+            [
+                'input_tokens' => 0,
+                'output_tokens' => 0,
+                'total_tokens' => 0,
+                'cost' => 0
+            ]
         );
 
-        $usage->increment('tokens_used', $tokens);
+        $total = $inputTokens + $outputTokens;
+
+        $usage->increment('input_tokens', $inputTokens);
+        $usage->increment('output_tokens', $outputTokens);
+        $usage->increment('total_tokens', $total);
+        $usage->increment('cost', $cost);
     }
 
     public function getUsage(string $ip): int
     {
-        $today = Carbon::today()->toDateString();
+        $today = now()->toDateString();
 
-        return TokenUsage::where('ip', $ip)
+        $usage = \App\Models\TokenUsage::where('ip', $ip)
             ->where('date', $today)
-            ->value('tokens_used') ?? 0;
+            ->first();
+
+        return $usage?->total_tokens ?? 0;
     }
 
     public function isExceeded(string $ip): bool

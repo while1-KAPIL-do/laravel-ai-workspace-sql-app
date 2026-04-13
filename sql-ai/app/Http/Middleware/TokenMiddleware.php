@@ -23,8 +23,12 @@ class TokenMiddleware
             ], 429);
         }
 
-        // attach token info for later use
-        $request->attributes->set('tokens_used', $result['tokens']);
+        // Updated structure (future-proof)
+        $request->attributes->set('token_meta', [
+            'input_tokens' => $result['tokens'] ?? 0,
+            'output_tokens' => 0, 
+            'total_tokens' => $result['tokens'] ?? 0,
+        ]);
 
         return $next($request);
     }

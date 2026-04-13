@@ -18,6 +18,10 @@ use App\Http\Controllers\VoiceToSqlController;
 use App\Services\Token\PythonTokenizerClient;
 
 Route::post('/voice-to-sql', [VoiceToSqlController::class, 'process'])->name('voice-to-sql');
+Route::post('/execute-sql', [VoiceToSqlController::class, 'executeSql']);
+Route::get('/analytics/schema', [VoiceToSqlController::class, 'dbSchema']);
+
+
 Route::get('/voice-to-sql-view', function () {
     return view('voice-to-sql');
 });
@@ -33,6 +37,8 @@ Route::prefix('analytics')->group(function () {
     Route::get('/top-ips', [TokenAnalyticsController::class, 'topIps']);
     Route::get('/top-users', [TokenAnalyticsController::class, 'topUsers']);
     Route::get('/cost', [TokenAnalyticsController::class, 'cost']);
+    Route::get('/cost-breakdown', [TokenAnalyticsController::class, 'costBreakdown']);
+    Route::get('/filters', [TokenAnalyticsController::class, 'filters']);
 });
 
 Route::get('/dashboard/tokens', function () {

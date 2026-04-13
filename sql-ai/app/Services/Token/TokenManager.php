@@ -51,8 +51,17 @@ class TokenManager
         return ['allowed' => true, 'tokens' => $estimated];
     }
 
-    public function record(string $ip, int $tokens): void
+    public function record(string $ip, int $inputTokens, int $outputTokens, string $model = 'gpt-4', string $provider = 'openai'): void
     {
-        $this->usageService->addUsage($ip, $tokens);
+        $pricing = config("llm.llm_pricing.$provider.$model") 
+                ?? config("llm.llm_pricing.default");
+
+        $inputCostPer1k = $pricing['input'];
+        $outputCostPer1k = $pricing['output'];
+
+        $cost = ($inputTokens / 1000 * $inputCostPer1k)
+            + ($outputTokens / 1000 * $outputCostPer1k);
+
+        $this->usageService->addUsage($ip, $inputTokens, $outputTokens, $cost, $model, $provider);
     }
 }

@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
     <script>
-        // Enable dark mode support for Tailwind CDN
         tailwind.config = {
             darkMode: 'class',
             content: [],
@@ -26,12 +25,19 @@
             height: 420px;
             width: 100%;
         }
-        
         .card-hover {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .card-hover:hover {
             transform: translateY(-4px);
+        }
+        .filter-btn {
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            background-color: #22d3ee !important;
+            color: #0f172a !important;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -45,14 +51,11 @@
                 </h1>
                 <p class="text-slate-500 dark:text-slate-400 mt-1">Real-time overview of token usage</p>
             </div>
-            
             <div class="flex items-center gap-4">
-                <button onclick="toggleTheme()" 
-                        id="theme-toggle"
+                <button onclick="toggleTheme()" id="theme-toggle"
                         class="w-11 h-11 flex items-center justify-center bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl transition-all shadow-sm">
                     <i id="theme-icon" class="fas fa-moon text-xl text-slate-700 dark:text-slate-300"></i>
                 </button>
-                
                 <button onclick="loadData()" 
                         class="px-5 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl flex items-center gap-2 transition-colors">
                     <i class="fas fa-sync-alt"></i> Refresh
@@ -60,8 +63,20 @@
             </div>
         </div>
 
+        <!-- Filters -->
+        <div class="mb-8 flex gap-8 flex-wrap">
+            <div>
+                <p class="text-sm mb-2 text-slate-500 dark:text-slate-400">Provider</p>
+                <div id="providerFilters" class="flex gap-2 flex-wrap"></div>
+            </div>
+            <div>
+                <p class="text-sm mb-2 text-slate-500 dark:text-slate-400" id="modelLabel">Model</p>
+                <div id="modelFilters" class="flex gap-2 flex-wrap"></div>
+            </div>
+        </div>
+
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
             <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 card-hover shadow-sm">
                 <div class="flex items-center justify-between mb-4">
                     <i class="fas fa-bolt text-3xl text-emerald-500"></i>
@@ -86,7 +101,16 @@
                     <span class="text-xs font-medium px-3 py-1 bg-violet-100 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-full">Active</span>
                 </div>
                 <p class="text-5xl font-semibold tracking-tighter" id="users">0</p>
-                <p class="text-slate-500 dark:text-slate-400 mt-1">Unique Users</p>
+                <p class="text-slate-500 dark:text-slate-400 mt-1">Unique IPs</p>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 card-hover shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <i class="fas fa-dollar-sign text-3xl text-rose-500"></i>
+                    <span class="text-xs font-medium px-3 py-1 bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-full">Cost</span>
+                </div>
+                <p class="text-5xl font-semibold tracking-tighter" id="cost">$0</p>
+                <p class="text-slate-500 dark:text-slate-400 mt-1">Total Cost</p>
             </div>
         </div>
 
@@ -97,17 +121,11 @@
                     <h2 class="text-xl font-semibold">Daily Tokens Usage Trend</h2>
                     <p class="text-slate-500 dark:text-slate-400 text-sm">Last 30 days</p>
                 </div>
-                
                 <div class="flex gap-2">
-                    <button onclick="changeChartType('line')" 
-                            class="px-5 py-2 rounded-2xl text-sm font-medium bg-cyan-500 text-white" 
-                            id="btn-line">Line Chart</button>
-                    <button onclick="changeChartType('bar')" 
-                            class="px-5 py-2 rounded-2xl text-sm font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600" 
-                            id="btn-bar">Bar Chart</button>
+                    <button onclick="changeChartType('line')" class="px-5 py-2 rounded-2xl text-sm font-medium bg-cyan-500 text-white" id="btn-line">Line Chart</button>
+                    <button onclick="changeChartType('bar')" class="px-5 py-2 rounded-2xl text-sm font-medium bg-slate-200 dark:bg-slate-700" id="btn-bar">Bar Chart</button>
                 </div>
             </div>
-            
             <div class="chart-container">
                 <canvas id="chart"></canvas>
             </div>
@@ -119,133 +137,215 @@
     </div>
 
     <script>
-        let currentChart = null;
-        let chartType = 'line';
-        let refreshInterval = null;
-        const appEnv = "{{ env('APP_ENV') }}";   // based on env for AWS usage
+    let selectedProvider = 'all';
+    let selectedModel = 'all';
+    let currentChart = null;
+    let chartType = 'line';
+    let refreshInterval = null;
+    const appEnv = "{{ env('APP_ENV') }}";
 
-        function getRefreshInterval() {
-            const isLocal = (appEnv === 'local' || appEnv === 'development');
+    // Model mapping based on provider
+    const modelMapping = {
+        'openai': ['gpt-4', 'gpt-3.5'],
+        'anthropic': ['claude-3-sonnet'],
+        // Add more providers here if needed
+    };
+
+    function getRefreshInterval() {
+        const isLocal = (appEnv === 'local' || appEnv === 'development');
+        const intervalMs = isLocal ? 30000 : 86400000;
+        const intervalText = isLocal ? '30 seconds' : '24 hours';
+
+        document.getElementById('footer-refresh-text').innerHTML =
+            `Data refreshes automatically every ${intervalText} • <span class="cursor-pointer underline" onclick="loadData()">Refresh Now</span>`;
+        return intervalMs;
+    }
+
+    async function loadFilters() {
+        try {
+            const res = await fetch('/analytics/filters');
+            const data = await res.json();
             
-            const intervalMs = isLocal ? 30000 : 86400000;           // 30 sec vs 24 hours
-            const intervalText = isLocal ? '30 seconds' : '24 hours';
+            renderProviderFilter(data.providers || []);
+            // Initial model render (will be updated when provider changes)
+            renderModelFilter([]);
+        } catch (e) {
+            console.error("Failed to load filters", e);
+        }
+    }
 
-            document.getElementById('footer-refresh-text').innerHTML = 
-                `Data refreshes automatically every ${intervalText} • <span class="cursor-pointer underline" onclick="loadData()">Refresh Now</span>`;
-            return intervalMs;
+    function renderProviderFilter(providers) {
+        const container = document.getElementById('providerFilters');
+        let html = `
+            <button onclick="setProvider('all')" 
+                    class="filter-btn px-4 py-1.5 text-sm rounded-2xl transition-all active" id="provider-all">
+                All
+            </button>
+        `;
+        providers.forEach(provider => {
+            html += `
+                <button onclick="setProvider('${provider}')" 
+                        class="filter-btn px-4 py-1.5 text-sm rounded-2xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-all"
+                        id="provider-${provider}">
+                    ${provider}
+                </button>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function renderModelFilter(models) {
+        const container = document.getElementById('modelFilters');
+        const providerLabel = document.getElementById('modelLabel');
+        
+        if (!models || models.length === 0) {
+            container.innerHTML = `<p class="text-sm text-slate-400">Select a provider to see models</p>`;
+            return;
         }
 
-        function toggleTheme() {
-            const html = document.documentElement;
-            const icon = document.getElementById('theme-icon');
-            
-            if (html.classList.contains('dark')) {
-                html.classList.remove('dark');
-                icon.classList.remove('fa-moon');
-                icon.classList.add('fa-sun');
-            } else {
-                html.classList.add('dark');
-                icon.classList.remove('fa-sun');
-                icon.classList.add('fa-moon');
+        let html = `
+            <button onclick="setModel('all')" 
+                    class="filter-btn px-4 py-1.5 text-sm rounded-2xl transition-all active" id="model-all">
+                All
+            </button>
+        `;
+        models.forEach(model => {
+            html += `
+                <button onclick="setModel('${model}')" 
+                        class="filter-btn px-4 py-1.5 text-sm rounded-2xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-all"
+                        id="model-${model}">
+                    ${model}
+                </button>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function setProvider(provider) {
+        selectedProvider = provider;
+        selectedModel = 'all';   // Reset model when provider changes
+
+        // Update active provider button
+        document.querySelectorAll('[id^="provider-"]').forEach(btn => {
+            btn.classList.remove('active', 'bg-cyan-500', 'text-white', 'shadow-sm');
+            if (btn.id === `provider-${provider}`) {
+                btn.classList.add('active', 'bg-cyan-500', 'text-white', 'shadow-sm');
             }
-            
-            // Re-render chart with correct colors
-            setTimeout(loadData, 10);
-        }
+        });
 
-        async function loadData() {
-            try {
-                const summaryRes = await fetch('/analytics/summary');
-                const summary = await summaryRes.json();
+        // Update model filter based on selected provider
+        const models = modelMapping[provider] || [];
+        renderModelFilter(models);
 
-                document.getElementById('today').innerText = Number(summary.today_tokens || 0).toLocaleString();
-                document.getElementById('total').innerText = Number(summary.total_tokens || 0).toLocaleString();
-                document.getElementById('users').innerText = Number(summary.unique_users || 0).toLocaleString();
+        loadData();
+    }
 
-                const dailyRes = await fetch('/analytics/daily');
-                const daily = await dailyRes.json();
+    function setModel(model) {
+        selectedModel = model;
 
-                const labels = daily.map(d => d.date);
-                const data = daily.map(d => d.total);
-
-                renderChart(labels, data);
-            } catch (e) {
-                console.error("Error loading data:", e);
+        // Update active model button
+        document.querySelectorAll('[id^="model-"]').forEach(btn => {
+            btn.classList.remove('active', 'bg-cyan-500', 'text-white', 'shadow-sm');
+            if (btn.id === `model-${model}`) {
+                btn.classList.add('active', 'bg-cyan-500', 'text-white', 'shadow-sm');
             }
+        });
+
+        loadData();
+    }
+
+    function toggleTheme() {
+        const html = document.documentElement;
+        const icon = document.getElementById('theme-icon');
+        if (html.classList.contains('dark')) {
+            html.classList.remove('dark');
+            icon.classList.remove('fa-moon');
+            icon.classList.add('fa-sun');
+        } else {
+            html.classList.add('dark');
+            icon.classList.remove('fa-sun');
+            icon.classList.add('fa-moon');
         }
+        setTimeout(loadData, 50);
+    }
 
-        function renderChart(labels, data) {
-            const ctx = document.getElementById('chart').getContext('2d');
-            if (currentChart) currentChart.destroy();
+    async function loadData() {
+        try {
+            const query = `?provider=${encodeURIComponent(selectedProvider)}&model=${encodeURIComponent(selectedModel)}`;
 
-            const isDark = document.documentElement.classList.contains('dark');
-            const borderColor = isDark ? '#67e8f9' : '#0891b2';
-            const bgColor = isDark ? 'rgba(103, 232, 249, 0.15)' : 'rgba(8, 145, 178, 0.15)';
+            const [summaryRes, dailyRes] = await Promise.all([
+                fetch('/analytics/summary' + query),
+                fetch('/analytics/daily' + query)
+            ]);
 
-            currentChart = new Chart(ctx, {
-                type: chartType,
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Tokens Used',
-                        data: data,
-                        borderColor: borderColor,
-                        backgroundColor: chartType === 'line' ? bgColor : borderColor,
-                        tension: 0.35,
-                        borderWidth: 3,
-                        pointRadius: 3,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: isDark ? '#1e2937' : '#f8fafc',
-                            titleColor: isDark ? '#e2e8f0' : '#0f172a',
-                            bodyColor: isDark ? '#94a3b8' : '#475569',
-                            padding: 12
-                        }
-                    },
-                    scales: {
-                        y: { grid: { color: isDark ? '#334155' : '#e2e8f0' }, ticks: { color: isDark ? '#94a3b8' : '#64748b' } },
-                        x: { grid: { color: isDark ? '#334155' : '#e2e8f0' }, ticks: { color: isDark ? '#94a3b8' : '#64748b' } }
-                    }
+            const summary = await summaryRes.json();
+            const daily = await dailyRes.json();
+
+            document.getElementById('today').innerText = Number(summary.today_tokens || 0).toLocaleString();
+            document.getElementById('total').innerText = Number(summary.total_tokens || 0).toLocaleString();
+            document.getElementById('users').innerText = Number(summary.unique_users || 0).toLocaleString();
+            document.getElementById('cost').innerText = "$" + Number(summary.total_cost || 0).toFixed(4);
+
+            const labels = daily.map(d => d.date);
+            const inputData = daily.map(d => Number(d.input_tokens || 0));
+            const outputData = daily.map(d => Number(d.output_tokens || 0));
+            const totalData = daily.map(d => Number(d.total_tokens || 0));
+
+            renderChart(labels, inputData, outputData, totalData);
+        } catch (e) {
+            console.error("Error loading data:", e);
+        }
+    }
+
+    function renderChart(labels, inputData, outputData, totalData) {
+        const ctx = document.getElementById('chart').getContext('2d');
+        if (currentChart) currentChart.destroy();
+
+        const isDark = document.documentElement.classList.contains('dark');
+
+        currentChart = new Chart(ctx, {
+            type: chartType,
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Input Tokens', data: inputData, borderColor: isDark ? '#67e8f9' : '#0891b2', borderWidth: 2, tension: 0.3 },
+                    { label: 'Output Tokens', data: outputData, borderColor: isDark ? '#a78bfa' : '#7c3aed', borderWidth: 2, tension: 0.3 },
+                    { label: 'Total Tokens', data: totalData, borderColor: isDark ? '#f472b6' : '#db2777', borderWidth: 3, tension: 0.4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'top' } },
+                scales: {
+                    y: { grid: { color: isDark ? '#334155' : '#e2e8f0' } },
+                    x: { grid: { color: isDark ? '#334155' : '#e2e8f0' } }
                 }
-            });
-        }
+            }
+        });
+    }
 
-        function changeChartType(type) {
-            chartType = type;
-            
-            document.getElementById('btn-line').classList.toggle('bg-cyan-500', type === 'line');
-            document.getElementById('btn-line').classList.toggle('text-white', type === 'line');
-            document.getElementById('btn-line').classList.toggle('bg-slate-200', type !== 'line');
-            document.getElementById('btn-line').classList.toggle('dark:bg-slate-700', type !== 'line');
-            
-            document.getElementById('btn-bar').classList.toggle('bg-cyan-500', type === 'bar');
-            document.getElementById('btn-bar').classList.toggle('text-white', type === 'bar');
-            document.getElementById('btn-bar').classList.toggle('bg-slate-200', type !== 'bar');
-            document.getElementById('btn-bar').classList.toggle('dark:bg-slate-700', type !== 'bar');
-            
-            loadData();
-        }
+    function changeChartType(type) {
+        chartType = type;
+        document.getElementById('btn-line').classList.toggle('bg-cyan-500', type === 'line');
+        document.getElementById('btn-line').classList.toggle('text-white', type === 'line');
+        document.getElementById('btn-bar').classList.toggle('bg-cyan-500', type === 'bar');
+        document.getElementById('btn-bar').classList.toggle('text-white', type === 'bar');
+        loadData();
+    }
 
-        // Auto refresh every 30 seconds
-        function startAutoRefresh() {
-            if (refreshInterval) clearInterval(refreshInterval);
-            const intervalMs = getRefreshInterval();
-            refreshInterval = setInterval(loadData, intervalMs);
-        }
+    function startAutoRefresh() {
+        if (refreshInterval) clearInterval(refreshInterval);
+        const intervalMs = getRefreshInterval();
+        refreshInterval = setInterval(loadData, intervalMs);
+    }
 
-        // Initial load
-        window.onload = () => {
-            loadData();
-            startAutoRefresh();
-        };
-
-    </script>
+    // Initial load
+    window.onload = () => {
+        loadFilters();
+        loadData();
+        startAutoRefresh();
+    };
+</script>
 </body>
 </html>

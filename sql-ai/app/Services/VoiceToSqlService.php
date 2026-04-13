@@ -5,10 +5,10 @@ namespace App\Services;
 use App\Ai\Agents\MySqlExpert;
 use App\Services\Token\TokenManager;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Laravel\Ai\Audio;
 use Laravel\Ai\Transcription;
 use Exception;
 
@@ -18,152 +18,189 @@ class VoiceToSqlService
         protected TokenManager $tokenManager
     ) {}
 
-    public function handleVoiceToSql(Request $request)
+    public function handle(Request $request): JsonResponse
     {
-        // Validate either uploaded file OR recorded audio
-        $request->validate([
-            'audio_file' => 'required_without:audio|file|mimes:mp3,wav,webm,ogg|max:20480',
-            'audio'      => 'required_without:audio_file|file|mimes:mp3,wav,webm,ogg|max:20480',
+        $audioPath = null;
+        $userQuestion = null;
+        $sql = null;
+        $inputTokens = 0;
+        $outputTokens = 0;
+
+        Log::info('VoiceToSql process started', [
+            'ip' => $request->ip()
         ]);
 
-        $path = null;
-        $sql = null;
-        $results = [];
-        $userQuestion = null;
-        $executionSuccess = false;
-        $errorMessage = null;
-
         try {
-            // Determine which file input to use (microphone recording or manual upload)
-            if ($request->hasFile('audio_file')) {
-                $path = $request->file('audio_file')->store('voice-input/' . now()->format('Y-m-d'));
-            } elseif ($request->hasFile('audio')) {
-                $path = $request->file('audio')->store('voice-input/' . now()->format('Y-m-d'));
-            } else {
-                throw new \Exception('No audio file provided.');
-            }
-            
-            // 2. Transcribe voice to text
-            $transcript = Transcription::fromStorage($path)->generate();
-            $userQuestion = trim((string) $transcript);
+            // 1. Validation
+            Log::info('Step 1: Validating request');
+            $request->validate([
+                'audio_file' => 'required_without:audio|file|mimes:mp3,wav,webm,ogg|max:20480',
+                'audio'      => 'required_without:audio_file|file|mimes:mp3,wav,webm,ogg|max:20480',
+            ]);
 
-            if (empty($userQuestion)) {
+            // 2. Upload Audio
+            Log::info('Step 2: Uploading audio file');
+            $audioPath = $this->uploadAudio($request);
+
+            // 3. Transcribe
+            Log::info('Step 3: Transcribing audio');
+            $userQuestion = $this->transcribeAudio($audioPath);
+
+            if (empty(trim($userQuestion))) {
                 throw new Exception('No speech detected in the audio.');
             }
 
-            // TOKEN CHECK STARTS HERE
-            $ip = request()->ip();
-            $tokenResult = $this->tokenManager->validate($userQuestion, $ip);
+            Log::info('Transcription successful', ['question_length' => strlen($userQuestion)]);
+
+            // 4. Token Limit Check
+            Log::info('Step 4: Checking token limit');
+            $tokenResult = $this->tokenManager->validate($userQuestion, $request->ip());
             if (!$tokenResult['allowed']) {
-                throw new Exception('Token limit exceeded. Please reduce input size.');
+                throw new Exception('Token limit exceeded.');
             }
 
+            $inputTokens = $tokenResult['tokens'] ?? 0;
 
-            // 3. Generate SQL using dedicated agent
-            // $sqlResponse = (new MySqlExpert())->prompt($userQuestion);
-            $agent = new MySqlExpert();
-            $fullPrompt = <<<PROMPT
-                User asked: \"{$userQuestion}\"\n\n" .
-                Follow the mandatory workflow strictly:
-                1. First call the get_database_schema tool.
-                2. Analyze the real schema.
-                3. Generate the correct SELECT query using exact column names from the schema.
-                4. Return ONLY the final SQL query.
+            // 5. Generate SQL
+            Log::info('Step 5: Generating SQL');
+            $sql = $this->generateSql($userQuestion);
 
-                Do not return the schema. Do not explain. Just the SQL.
-            PROMPT;
+            // Estimate output tokens (rough estimation)
+            $outputTokens = (int) (strlen($sql) / 4);   // rough approximation
 
-            $sqlResponse = $agent->prompt($fullPrompt);
-            
-            $tokensUsed = $tokenResult['tokens']; // fallback
-            // if your LLM returns usage, use that instead
-            if (is_array($sqlResponse) && isset($sqlResponse['usage']['total_tokens'])) {
-                $tokensUsed = $sqlResponse['usage']['total_tokens'];
-            }
-            $this->tokenManager->record($ip, $tokensUsed);
+            Log::info('SQL generated', ['sql_length' => strlen($sql)]);
 
-            $sql = trim((string) $sqlResponse);
-            $sql = rtrim($sql, ';');
+            // 6. Safety Check
+            Log::info('Step 6: Validating SQL safety');
+            $this->validateSqlSafety($sql);
 
-            $upperSql = strtoupper($sql);
+            // 7. Execute SQL
+            Log::info('Step 7: Executing SQL');
+            $results = $this->executeSql($sql);
 
-            // 4. Safety Check
-            if (
-                str_contains($upperSql, 'INSERT ') ||
-                str_contains($upperSql, 'UPDATE ') ||
-                str_contains($upperSql, 'DELETE ') ||
-                str_contains($upperSql, 'DROP ') ||
-                str_contains($upperSql, 'TRUNCATE ') ||
-                str_contains($upperSql, 'ALTER ') ||
-                str_contains($upperSql, 'CREATE ') ||
-                !str_starts_with($upperSql, 'SELECT ')
-            ) {
-                // We still allow it to continue so user can see the bad SQL
-            }
+            Log::info('SQL executed', ['row_count' => count($results)]);
 
-            // Optional: Add LIMIT if missing
-            if (!str_contains($upperSql, 'LIMIT')) {
-                $sql .= ' LIMIT 500';
-            }
+            // ==================== IMPORTANT: RECORD TOKEN USAGE ====================
+            Log::info('Step 8: Recording token usage');
+            $this->tokenManager->record(
+                $request->ip(),
+                $inputTokens,
+                $outputTokens
+            );
+            // =====================================================================
 
-            // 5. Try to execute the query
-            $executionSuccess = true;
-            $errorMessage = null;
+            // 9. Cleanup
+            Log::info('Step 9: Cleaning up audio file');
+            $this->cleanupAudio($audioPath);
 
-            try {
-                $results = DB::select($sql);
-            } catch (\Exception $dbException) {
-                $executionSuccess = false;
-                $errorMessage = $dbException->getMessage();
-            }
+            Log::info('VoiceToSql process completed successfully');
 
-            // 6. Create friendly spoken summary
-            if ($executionSuccess) {
-                $summaryText = "Here are the results for: “{$userQuestion}”\n" .
-                               count($results) . " row(s) found.";
-            } else {
-                $summaryText = "I generated this SQL query for: “{$userQuestion}”\n" .
-                               "But it failed to execute. The error is: {$errorMessage}";
-            }
-
-            // 7. Cleanup input audio
-            if ($path && Storage::exists($path)) {
-                Storage::delete($path);
-            }
-
-            // 8. Return response
-            return response()->json([
-                'success'          => $executionSuccess,
-                'user_question'    => $userQuestion,
-                'generated_sql'    => $sql,
-                'row_count'        => count($results),
-                'results_preview'  => $executionSuccess ? array_slice($results, 0, 5) : [],
-                'error'            => $errorMessage,
-                'spoken_summary'   => $summaryText,
-                // 'audio_response_url' => $audioResponseUrl,   // Uncomment when you enable TTS again
-            ]);
+            return $this->successResponse($userQuestion, $sql, $results);
 
         } catch (Exception $e) {
-            // Cleanup on early error
-            if ($path && Storage::exists($path)) {
-                Storage::delete($path);
-            }
+            $this->cleanupAudio($audioPath);
 
-            Log::error('Voice-to-SQL failed', [
-                'error' => $e->getMessage(),
-                'file'  => $path ?? 'none',
+            Log::error('VoiceToSql failed', [
+                'error'         => $e->getMessage(),
+                'user_question' => $userQuestion,
+                'sql'           => $sql
             ]);
 
-            $errorSummary = "Sorry, something went wrong while processing your request: " . $e->getMessage();
-
-            return response()->json([
-                'success'          => false,
-                'user_question'    => $userQuestion ?? null,
-                'generated_sql'    => $sql ?? null,
-                'error'            => $e->getMessage(),
-                'spoken_summary'   => $errorSummary,
-                // 'audio_response_url' => null,
-            ], 422);
+            return $this->errorResponse($e, $userQuestion, $sql);
         }
+    }
+
+    // ====================== Private Methods (unchanged) ======================
+
+    private function uploadAudio(Request $request): string
+    {
+        $file = $request->hasFile('audio_file') 
+            ? $request->file('audio_file') 
+            : $request->file('audio');
+
+        return $file->store('voice-input/' . now()->format('Y-m-d'));
+    }
+
+    private function transcribeAudio(string $path): string
+    {
+        $transcript = Transcription::fromStorage($path)->generate();
+        return trim((string) $transcript);
+    }
+
+    private function generateSql(string $userQuestion): string
+    {
+        $agent = new MySqlExpert();
+
+        $prompt = <<<PROMPT
+User asked: "{$userQuestion}"
+
+Follow the mandatory workflow strictly:
+1. First call the get_database_schema tool.
+2. Analyze the real schema.
+3. Generate the correct SELECT query using exact column names.
+4. Return ONLY the final SQL query.
+Do not explain.
+PROMPT;
+
+        $response = $agent->prompt($prompt);
+        $sql = trim((string) $response);
+        $sql = rtrim($sql, ';');
+
+        if (!str_contains(strtoupper($sql), 'LIMIT')) {
+            $sql .= ' LIMIT 500';
+        }
+
+        return $sql;
+    }
+
+    private function validateSqlSafety(string $sql): void
+    {
+        $upper = strtoupper($sql);
+        $dangerous = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'TRUNCATE', 'ALTER', 'CREATE'];
+
+        foreach ($dangerous as $word) {
+            if (str_contains($upper, $word . ' ')) {
+                throw new Exception("Unsafe SQL operation: {$word}");
+            }
+        }
+
+        if (!str_starts_with($upper, 'SELECT ')) {
+            throw new Exception("Only SELECT queries are allowed.");
+        }
+    }
+
+    private function executeSql(string $sql): array
+    {
+        return DB::select($sql);
+    }
+
+    private function cleanupAudio(?string $path): void
+    {
+        if ($path && Storage::exists($path)) {
+            Storage::delete($path);
+        }
+    }
+
+    private function successResponse(string $userQuestion, string $sql, array $results): JsonResponse
+    {
+        return response()->json([
+            'success'         => true,
+            'user_question'   => $userQuestion,
+            'generated_sql'   => $sql,
+            'row_count'       => count($results),
+            'results_preview' => array_slice($results, 0, 5),
+            'spoken_summary'  => "Here are the results for: “{$userQuestion}”. " . count($results) . " row(s) found.",
+        ]);
+    }
+
+    private function errorResponse(Exception $e, ?string $userQuestion = null, ?string $sql = null): JsonResponse
+    {
+        return response()->json([
+            'success'        => false,
+            'user_question'  => $userQuestion,
+            'generated_sql'  => $sql,
+            'error'          => $e->getMessage(),
+            'spoken_summary' => "Sorry, something went wrong: " . $e->getMessage(),
+        ], 422);
     }
 }
