@@ -154,7 +154,7 @@
                     <!-- Error -->
                     <div id="schemaError" class="hidden text-sm text-red-400 py-2 flex items-center gap-2">
                         <i class="fas fa-circle-exclamation"></i>
-                        Could not load schema. Check the /analytics/schema endpoint.
+                        Could not load schema. Check the /ai/analytics/schema endpoint.
                     </div>
 
                 </div>
@@ -164,9 +164,8 @@
         <!-- ── Input Card ── -->
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-sm px-6 py-5 mb-4">
 
-            <form action="{{ route('voice-to-sql') }}" method="POST" enctype="multipart/form-data" id="voiceForm">
+            <form action="{{ route('ai-sql-assitance') }}" method="POST" enctype="multipart/form-data" id="voiceForm">
                 @csrf
-
                 <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Your query</p>
 
                 <!-- Unified composer bar -->
@@ -301,7 +300,7 @@
     let schemaLoaded = false;
     let schemaOpen   = false;
     let schemaData   = [];
-    // Expected API shape from /analytics/schema:
+    // Expected API shape from /ai/analytics/schema:
     // [ { name: "users", row_count: 1200, columns: [ { name: "id", type: "INT", is_primary: true }, … ] } ]
 
     function toggleSchema() {
@@ -317,7 +316,7 @@
 
     async function loadSchema() {
         try {
-            const res  = await fetch('/analytics/schema');
+            const res  = await fetch('/ai/analytics/schema');
             const data = await res.json();
             schemaData = data;
 
@@ -404,7 +403,7 @@
                 </div>`;
 
             try {
-                const res = await fetch('/execute-sql', {
+                const res = await fetch('/ai/execute-sql', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

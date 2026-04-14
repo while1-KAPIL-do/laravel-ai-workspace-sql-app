@@ -18,11 +18,14 @@ class VoiceToSqlController extends Controller
     public function process(Request $request)
     {
         $response = $this->voiceToSqlService->handle($request);
+        $data     = $response->getData(true);
 
-        // Convert JSON response to session so Blade can read it
-        if ($response->getStatusCode() === 200 || $response->getStatusCode() === 422) {
-            $data = $response->getData(true);
+        if ($response->getStatusCode() === 200) {
             return redirect()->back()->with('result', $data);
+        }
+
+        if ($response->getStatusCode() === 422) {
+            return redirect()->back()->with('error', $data);  // separate key
         }
 
         return $response;

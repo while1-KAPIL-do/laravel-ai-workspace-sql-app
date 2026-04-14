@@ -118,7 +118,7 @@
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-8 shadow-sm">
             <div class="flex items-center justify-between mb-6">
                 <div>
-                    <h2 class="text-xl font-semibold">Daily Tokens Usage Trend</h2>
+                    <h2 class="text-xl font-semibold">Daily Tokens Usage</h2>
                     <p class="text-slate-500 dark:text-slate-400 text-sm">Last 30 days</p>
                 </div>
                 <div class="flex gap-2">

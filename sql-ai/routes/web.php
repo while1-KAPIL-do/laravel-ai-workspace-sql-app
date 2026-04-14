@@ -17,13 +17,14 @@ use App\Models\User;
 use App\Http\Controllers\VoiceToSqlController;
 use App\Services\Token\PythonTokenizerClient;
 
-Route::post('/voice-to-sql', [VoiceToSqlController::class, 'process'])->name('voice-to-sql');
-Route::post('/execute-sql', [VoiceToSqlController::class, 'executeSql']);
-Route::get('/analytics/schema', [VoiceToSqlController::class, 'dbSchema']);
 
-
-Route::get('/voice-to-sql-view', function () {
-    return view('voice-to-sql');
+Route::prefix('ai')->group(function () {
+    Route::post('/sql-assitance', [VoiceToSqlController::class, 'process'])->name('ai-sql-assitance');
+    Route::get('/sql-assitance', function () {
+        return view('ai.sql-assitance');
+    });
+    Route::post('/execute-sql', [VoiceToSqlController::class, 'executeSql']);
+    Route::get('/analytics/schema', [VoiceToSqlController::class, 'dbSchema']);
 });
 
 Route::get('/', function () {

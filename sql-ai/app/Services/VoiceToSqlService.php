@@ -34,20 +34,36 @@ class VoiceToSqlService
             // 1. Validation
             Log::info('Step 1: Validating request');
             $request->validate([
-                'audio_file' => 'required_without:audio|file|mimes:mp3,wav,webm,ogg|max:20480',
-                'audio'      => 'required_without:audio_file|file|mimes:mp3,wav,webm,ogg|max:20480',
+                'text_query' => 'nullable|string|max:5000',
+                'audio_file' => 'nullable|file|mimes:mp3,wav,webm,ogg|max:20480',
             ]);
 
-            // 2. Upload Audio
-            Log::info('Step 2: Uploading audio file');
-            $audioPath = $this->uploadAudio($request);
+            if (
+                (! $request->filled('text_query') || trim($request->text_query) === '') &&
+                ! $request->hasFile('audio_file')
+            ) {
+                throw new Exception("Please provide either text or audio input.");
+            }
 
-            // 3. Transcribe
-            Log::info('Step 3: Transcribing audio');
-            $userQuestion = $this->transcribeAudio($audioPath);
+            $userQuestion = null;
 
+            // TEXT FIRST
+            if ($request->filled('text_query') && trim($request->text_query) !== '') {
+                Log::info('Step 2: Using text query');
+                $userQuestion = trim($request->text_query);
+            }
+            // AUDIO
+            elseif ($request->hasFile('audio_file')) {
+                Log::info('Step 2: Processing audio');
+                $audioPath = $this->uploadAudio($request);
+                Log::info('Step 3: Transcribing audio');
+                $userQuestion = $this->transcribeAudio($audioPath);
+            }
+
+
+            // FINAL CHECK
             if (empty(trim($userQuestion))) {
-                throw new Exception('No speech detected in the audio.');
+                throw new Exception('No valid input provided.');
             }
 
             Log::info('Transcription successful', ['question_length' => strlen($userQuestion)]);
