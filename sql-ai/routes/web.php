@@ -1,18 +1,17 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use function Laravel\Ai\agent;
-use App\Agents\SqlGeneratorAgent;
 use App\Ai\Agents\MySqlExpert;
 use App\Http\Controllers\TokenAnalyticsController;
 use Laravel\Ai\Transcription;
 use Laravel\Ai\Audio;
 
+use App\Ai\Tools\GetDatabaseSchema;
+use Laravel\Ai\Tools\Request as AIReq;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Schema;
-use App\Models\User;
 
 use App\Http\Controllers\VoiceToSqlController;
 use App\Services\Token\PythonTokenizerClient;
@@ -49,12 +48,82 @@ Route::get('/dashboard/tokens', function () {
 
 ///////////////////////////////// TEST ROUTES /////////////////////////////////
 
+Route::get('/test-schema-tokens', function () {
+    $tool = new GetDatabaseSchema();
+    $request = new AIReq([]);
+
+    $schema = $tool->handle($request);
+
+    $tokens = (new PythonTokenizerClient())->getTokens($schema);
+
+    return response()->json([
+        'tokens' => $tokens,
+        'characters' => strlen($schema),
+    ]);
+});
 
 Route::get('/test/python-engine/token', function () {
-    $input = "My Name is Kapil";
+    
+    $tests = [
+        [
+            "input" => "Hello world",
+            "expected_tokens" => 2
+        ],
+        [
+            "input" => "Hello, world!",
+            "expected_tokens" => 4
+        ],
+        [
+            "input" => "This is a test sentence.",
+            "expected_tokens" => 6
+        ],
+        [
+            "input" => "The price is 100 dollars.",
+            "expected_tokens" => 7
+        ],
+        [
+            "input" => "Hello     world",
+            "expected_tokens" => 2
+        ],
+        [
+            "input" => "Hello\nworld",
+            "expected_tokens" => 3
+        ],
+        [
+            "input" => "My Name is Kapillllllllllllllllllll",
+            "expected_tokens" => 8  // long word splits into multiple tokens
+        ],
+        [
+            "input" => "🔥",
+            "expected_tokens" => 2
+        ],
+        [
+            "input" => "def add(a, b):\n    return a + b",
+            "expected_tokens" => 16
+        ],
+        [
+            "input" => "{\"name\": \"Kapil\", \"age\": 25}",
+            "expected_tokens" => 14
+        ],
+        [
+            "input" => "SELECT * FROM users WHERE age > 25;",
+            "expected_tokens" => 13
+        ],
+        [
+            "input" => "OpenAI provides powerful language models.",
+            "expected_tokens" => 8
+        ],
+    ];
 
     $pythonClient = new PythonTokenizerClient();
-    $actual = $pythonClient->getTokens($input);
+    
+    foreach ($tests as $test) {
+        $actual = $pythonClient->getTokens($test['input']);
+
+        echo "Input: " . $test['input'] . PHP_EOL;
+        echo "Expected: " . $test['expected_tokens'] . " | Actual: " . $actual . PHP_EOL;
+        echo "-----------------------------<br>" . PHP_EOL;
+    }
 
     return $actual;
 });

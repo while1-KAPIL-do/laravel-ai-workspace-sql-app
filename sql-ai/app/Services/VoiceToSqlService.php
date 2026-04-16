@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Ai\Agents\MySqlExpert;
 use App\Services\Token\TokenManager;
+use App\Services\Transcription\WhisperClient;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -23,8 +24,6 @@ class VoiceToSqlService
         $audioPath = null;
         $userQuestion = null;
         $sql = null;
-        $inputTokens = 0;
-        $outputTokens = 0;
 
         Log::info('VoiceToSql process started', [
             'ip' => $request->ip()
@@ -53,13 +52,19 @@ class VoiceToSqlService
                 $userQuestion = trim($request->text_query);
             }
             // AUDIO
-            elseif ($request->hasFile('audio_file')) {
-                Log::info('Step 2: Processing audio');
-                $audioPath = $this->uploadAudio($request);
-                Log::info('Step 3: Transcribing audio');
-                $userQuestion = $this->transcribeAudio($audioPath);
-            }
+                elseif ($request->hasFile('audio_file')) {
+                    $file = $request->hasFile('audio_file')
+                    ? $request->file('audio_file')
+                    : $request->file('audio');
 
+                if (!$file) {
+                    return response()->json(['error' => 'No audio file provided'], 422);
+                }
+
+                $whisper = new WhisperClient();
+                $result  = $whisper->transcribe($file);
+                $userQuestion  = $result['text'] ?? '' ;       
+            }
 
             // FINAL CHECK
             if (empty(trim($userQuestion))) {
@@ -75,43 +80,36 @@ class VoiceToSqlService
                 throw new Exception('Token limit exceeded.');
             }
 
-            $inputTokens = $tokenResult['tokens'] ?? 0;
-
             // 5. Generate SQL
             Log::info('Step 5: Generating SQL');
-            $sql = $this->generateSql($userQuestion);
+            $agentResponse = $this->generateSql($userQuestion);
 
-            // Estimate output tokens (rough estimation)
-            $outputTokens = (int) (strlen($sql) / 4);   // rough approximation
-
-            Log::info('SQL generated', ['sql_length' => strlen($sql)]);
+            if(empty($agentResponse)){
+                throw new Exception('MySql Agent, Failed!');
+            }
+            
+            Log::info('SQL generated', ['agentResponse' => $agentResponse]);
 
             // 6. Safety Check
             Log::info('Step 6: Validating SQL safety');
-            $this->validateSqlSafety($sql);
+            $this->validateSqlSafety($agentResponse['sql']);
 
-            // 7. Execute SQL
-            Log::info('Step 7: Executing SQL');
-            $results = $this->executeSql($sql);
-
-            Log::info('SQL executed', ['row_count' => count($results)]);
-
+            // 7. Cleanup
             // ==================== IMPORTANT: RECORD TOKEN USAGE ====================
-            Log::info('Step 8: Recording token usage');
+            Log::info('Step 7: Recording token usage');
             $this->tokenManager->record(
                 $request->ip(),
-                $inputTokens,
-                $outputTokens
+                $agentResponse['tokens']['input'],
+                $agentResponse['tokens']['output']
             );
             // =====================================================================
 
-            // 9. Cleanup
+            // 8. Cleanup
             Log::info('Step 9: Cleaning up audio file');
             $this->cleanupAudio($audioPath);
 
             Log::info('VoiceToSql process completed successfully');
-
-            return $this->successResponse($userQuestion, $sql, $results);
+            return $this->successResponse($userQuestion, $agentResponse['sql']);
 
         } catch (Exception $e) {
             $this->cleanupAudio($audioPath);
@@ -137,37 +135,70 @@ class VoiceToSqlService
         return $file->store('voice-input/' . now()->format('Y-m-d'));
     }
 
-    private function transcribeAudio(string $path): string
+    private function transcribeAudioFromDefault(string $path): string
     {
         $transcript = Transcription::fromStorage($path)->generate();
         return trim((string) $transcript);
     }
 
-    private function generateSql(string $userQuestion): string
+    private function generateSql(string $userQuestion)
     {
+        // Step 1: Init agent
         $agent = new MySqlExpert();
 
-        $prompt = <<<PROMPT
-User asked: "{$userQuestion}"
+        // Step 2: Call AI (LLM call)
+        $agentResponse = $agent->prompt($userQuestion);
 
-Follow the mandatory workflow strictly:
-1. First call the get_database_schema tool.
-2. Analyze the real schema.
-3. Generate the correct SELECT query using exact column names.
-4. Return ONLY the final SQL query.
-Do not explain.
-PROMPT;
+        // Step 3: Extract SQL
+        $sql = (string) $agentResponse;
 
-        $response = $agent->prompt($prompt);
-        $sql = trim((string) $response);
-        $sql = rtrim($sql, ';');
+        // Step 4: Safe extraction
+        $inputTokens = $agentResponse?->usage?->promptTokens ?? null;
+        $outputTokens = $agentResponse?->usage?->completionTokens ?? null;
 
-        if (!str_contains(strtoupper($sql), 'LIMIT')) {
-            $sql .= ' LIMIT 500';
-        }
+        return [
+            'question' => $userQuestion,
+            'sql' => $sql,
 
-        return $sql;
+            // REAL tokens (no estimation)
+            'tokens' => [
+                'input' => $inputTokens,
+                'output' => $outputTokens,
+                'total' => $inputTokens + $outputTokens,
+            ],
+        ];
     }
+
+    // will need below in futute
+    // private function generateSql(string $userQuestion)
+    // {
+    //     // Step 1: Init agent
+    //     $agent = new MySqlExpert();
+    //     $tokenizer = new PythonTokenizerClient();
+
+    //     // Step 2: Build FULL prompt (important)
+    //     $fullPrompt = $agent->buildFullPrompt($userQuestion);
+
+
+    //     // Step 3: Count REAL input tokens
+    //     $inputTokens = $tokenizer->getTokens($fullPrompt);
+
+    //     // Step 4: Call AI
+    //     $agentResponse = $agent->prompt($userQuestion);
+    //     $sql = str($agentResponse);
+
+    //     // Step 5: Count output tokens
+    //     $outputTokens = $tokenizer->getTokens((string)$sql);
+
+    //     $response = [
+    //         'full_prompt'   => $fullPrompt,
+    //         'input_tokens'  => $inputTokens,
+    //         'output_tokens' => $outputTokens,
+    //         'sql'           => (string)$sql
+    //     ];
+
+    //     return $response;
+    // }
 
     private function validateSqlSafety(string $sql): void
     {
@@ -185,11 +216,6 @@ PROMPT;
         }
     }
 
-    private function executeSql(string $sql): array
-    {
-        return DB::select($sql);
-    }
-
     private function cleanupAudio(?string $path): void
     {
         if ($path && Storage::exists($path)) {
@@ -197,15 +223,15 @@ PROMPT;
         }
     }
 
-    private function successResponse(string $userQuestion, string $sql, array $results): JsonResponse
+    private function successResponse(string $userQuestion, string $sql): JsonResponse
     {
         return response()->json([
             'success'         => true,
             'user_question'   => $userQuestion,
             'generated_sql'   => $sql,
-            'row_count'       => count($results),
-            'results_preview' => array_slice($results, 0, 5),
-            'spoken_summary'  => "Here are the results for: “{$userQuestion}”. " . count($results) . " row(s) found.",
+            'row_count'       => 0,
+            // 'results_preview' => ,
+            'spoken_summary'  => "Here are the results for: {$userQuestion}",
         ]);
     }
 

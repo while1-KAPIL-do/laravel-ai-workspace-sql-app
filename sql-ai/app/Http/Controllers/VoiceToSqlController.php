@@ -57,37 +57,54 @@ class VoiceToSqlController extends Controller
     }
 
     public function dbSchema(Request $request)
-    {
-        $tables = DB::select('SHOW TABLES');
-        $dbName = DB::getDatabaseName();
-        $schema = [];
+{
+    $path = storage_path('schemas/schooldb.sql');
 
-        foreach ($tables as $tableObj) {
-            $tableName = array_values((array) $tableObj)[0];
+    if (!file_exists($path)) {
+        return response()->json(['error' => 'Schema file not found'], 404);
+    }
 
-            $rowCount = DB::table($tableName)->count();
+    $sql = file_get_contents($path);
 
-            $columns = DB::select("
-                SELECT COLUMN_NAME as name, 
-                    DATA_TYPE   as type, 
-                    COLUMN_KEY  as `key`
-                FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-                ORDER BY ORDINAL_POSITION
-            ", [$dbName, $tableName]);
+    // Match CREATE TABLE blocks
+    preg_match_all('/CREATE TABLE\s+(\w+)\s*\((.*?)\);/is', $sql, $matches, PREG_SET_ORDER);
 
-            $schema[] = [
-                'name'      => $tableName,
-                'row_count' => $rowCount,
-                'columns'   => array_map(fn($col) => [
-                    'name'       => $col->name,
-                    'type'       => strtoupper($col->type),
-                    'is_primary' => $col->key === 'PRI',
-                ], $columns),
+    $schema = [];
+
+    foreach ($matches as $match) {
+        $tableName = $match[1];
+        $columnsRaw = $match[2];
+
+        $lines = explode(",", $columnsRaw);
+
+        $columns = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            // Skip constraints
+            if (str_starts_with(strtoupper($line), 'FOREIGN KEY')) continue;
+            if (str_starts_with(strtoupper($line), 'PRIMARY KEY')) continue;
+
+            preg_match('/^(\w+)\s+([a-zA-Z]+)/', $line, $colMatch);
+
+            if (!$colMatch) continue;
+
+            $columns[] = [
+                'name' => $colMatch[1],
+                'type' => strtoupper($colMatch[2]),
+                'is_primary' => str_contains(strtoupper($line), 'PRIMARY KEY'),
             ];
         }
 
-        return response()->json($schema);
+        $schema[] = [
+            'name' => $tableName,
+            'row_count' => 0, // since no real DB
+            'columns' => $columns,
+        ];
     }
+
+    return response()->json($schema);
+}
 
 }

@@ -3,46 +3,32 @@
 namespace App\Ai\Tools;
 
 use Laravel\Ai\Contracts\Tool;
-use Illuminate\Support\Facades\DB;
+use Laravel\Ai\Tools\Request;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Stringable;
 
 class GetDatabaseSchema implements Tool
 {
-    public function name(): string
+    public function description(): Stringable|string
     {
-        return 'get_database_schema';
+        return 'Returns database schema from SQL file';
     }
 
-    public function description(): string
+    public function schema(JsonSchema $schema): array
     {
-        return 'Returns the complete list of all tables and their columns with data types from the current database. Use this when you need to know the exact schema before writing a SQL query.';
+        return [
+            // No input required
+        ];
     }
 
-    public function schema(): array
+    public function handle(Request $request): Stringable|string
     {
-        return []; // No input parameters needed
-    }
+        $path = storage_path('schemas/schooldb.sql');
 
-    public function handle(array $input): string
-    {   
-        $output = "=== REAL DATABASE SCHEMA ===\n";
-        $output .= "Database: default_db (or sql_ai as per your error)\n\n";
-
-        $tables = DB::select("SHOW TABLES");
-
-        foreach ($tables as $tableRow) {
-            $tableName = array_values((array)$tableRow)[0];
-            $output .= "TABLE: `{$tableName}`\n";
-
-            $columns = DB::select("DESCRIBE `{$tableName}`");
-
-            foreach ($columns as $col) {
-                $extra = $col->Key === 'PRI' ? ' [PRIMARY KEY]' : '';
-                $output .= "   `{$col->Field}`  {$col->Type}{$extra}\n";
-            }
-            $output .= "\n";
+        if (!file_exists($path)) {
+            return 'Schema file not found';
         }
 
-        $output .= "Use only the columns shown above. Do not guess any column names.\n";
-        return $output;
+        return file_get_contents($path);
     }
 }

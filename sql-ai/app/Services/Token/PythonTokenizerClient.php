@@ -9,10 +9,12 @@ class PythonTokenizerClient
 {
     public function getTokens(string $text): ?int
     {
+        
+        $url = env('LLM_SERVICE_BASE_HOST') . '/count-tokens';
         try {
             $response = Http::timeout(1.5)
                 ->retry(2, 100)
-                ->post(config('tokens.python_service_url'), [
+                ->post($url, [
                     'text' => $text
                 ]);
 

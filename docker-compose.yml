@@ -42,8 +42,10 @@ services:
     ports:
       - "8001:8000"
     depends_on:
-      - mysql_shared
-      - llm-service   # NEW
+      mysql_shared:
+        condition: service_started
+      llm-service:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -55,10 +57,14 @@ services:
     container_name: llm-service
     ports:
       - "5000:8000"
+    volumes:
+      - ./llm-service:/app   # for live reload
     restart: always
     networks:
       - app-network
-    healthcheck:                # IMPORTANT
+    env_file:
+      - ./llm-service/.env
+    healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 3s

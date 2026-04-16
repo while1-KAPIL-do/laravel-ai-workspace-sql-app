@@ -48,6 +48,6 @@ class TokenUsageService
 
     public function isExceeded(string $ip): bool
     {
-        return $this->getUsage($ip) > config('tokens.daily_limit_per_ip');
+        return $this->getUsage($ip) > config('llm.tokens.daily_limit_per_ip');
     }
 }

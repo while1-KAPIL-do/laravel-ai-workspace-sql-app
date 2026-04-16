@@ -37,7 +37,19 @@ EOT;
     {
         return [
             new GetDatabaseSchema(),
-            // new DescribeTable(),
         ];
     }
+
+    // public function buildFullPrompt(string $userQuestion): string
+    // {
+    //     $toolsText = '';
+
+    //     foreach ($this->tools() as $tool) {
+    //         $toolsText .= get_class($tool) . "\n";
+    //     }
+
+    //     return $this->instructions()
+    //         . "\n\nTOOLS:\n" . $toolsText
+    //         . "\n\nUSER:\n" . $userQuestion;
+    // }
 }

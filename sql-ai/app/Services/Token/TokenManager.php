@@ -26,12 +26,12 @@ class TokenManager
         }
 
         // Step 1: Hard reject
-        if ($estimated > config('tokens.hard_limit')) {
+        if ($estimated > config('llm.tokens.hard_limit')) {
             return ['allowed' => false, 'reason' => 'Too large input'];
         }
 
         // Step 2: Safe zone → skip python
-        if ($estimated < config('tokens.safe_limit')) {
+        if ($estimated < config('llm.tokens.safe_limit')) {
             return ['allowed' => true, 'tokens' => $estimated];
         }
 
@@ -42,7 +42,7 @@ class TokenManager
 
         if ($actual !== null) {
             return [
-                'allowed' => $actual < config('tokens.hard_limit'),
+                'allowed' => $actual < config('llm.tokens.hard_limit'),
                 'tokens' => $actual
             ];
         }
