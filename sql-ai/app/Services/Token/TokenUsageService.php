@@ -8,7 +8,14 @@ use Carbon\Carbon;
 class TokenUsageService
 {
     
-    public function addUsage(string $ip, int $inputTokens, int $outputTokens, float $cost, string $model = 'gpt-4', string $provider = 'openai'): void
+    public function addUsage(
+        string $ip, 
+        int $inputTokens, 
+        int $outputTokens, 
+        float $cost, 
+        string $provider = 'openai',
+        string $model = 'gpt-4o-mini'
+    ): void
     {
         $today = now()->toDateString();
 

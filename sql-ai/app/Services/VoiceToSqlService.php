@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Ai\Agents\MySqlExpert;
 use App\Services\Token\TokenManager;
 use App\Services\Transcription\WhisperClient;
+use App\Support\Utils\LlmConfig;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -28,14 +29,20 @@ class VoiceToSqlService
         Log::info('VoiceToSql process started', [
             'ip' => $request->ip()
         ]);
+        
 
         try {
-            // 1. Validation
-            Log::info('Step 1: Validating request');
-            $request->validate([
-                'text_query' => 'nullable|string|max:5000',
-                'audio_file' => 'nullable|file|mimes:mp3,wav,webm,ogg|max:20480',
-            ]);
+            // 1. Fetch model
+            Log::info('Step 1: Fetch model');
+            $provider = LlmConfig::resolveProvider($request->input('provider'));
+            $model = LlmConfig::resolveModel($provider, $request->input('model'));
+
+            // 2. Restriction check
+            if (LlmConfig::isRestricted($provider, $model)) {
+                return response()->json([
+                    'error' => 'This model is restricted. Please contact to admin or choose a cheaper model.'
+                ], 403);
+            }
 
             if (
                 (! $request->filled('text_query') || trim($request->text_query) === '') &&
@@ -44,15 +51,16 @@ class VoiceToSqlService
                 throw new Exception("Please provide either text or audio input.");
             }
 
-            $userQuestion = null;
 
+            // 3. Fetch User Query
+            $userQuestion = null;
             // TEXT FIRST
             if ($request->filled('text_query') && trim($request->text_query) !== '') {
                 Log::info('Step 2: Using text query');
                 $userQuestion = trim($request->text_query);
             }
             // AUDIO
-                elseif ($request->hasFile('audio_file')) {
+            elseif ($request->hasFile('audio_file')) {
                     $file = $request->hasFile('audio_file')
                     ? $request->file('audio_file')
                     : $request->file('audio');
@@ -62,16 +70,15 @@ class VoiceToSqlService
                 }
 
                 $whisper = new WhisperClient();
-                $result  = $whisper->transcribe($file);
+                $result  = $whisper->transcribe($file); #TODO - Will handle provider and model for this also
                 $userQuestion  = $result['text'] ?? '' ;       
             }
-
             // FINAL CHECK
             if (empty(trim($userQuestion))) {
                 throw new Exception('No valid input provided.');
             }
-
             Log::info('Transcription successful', ['question_length' => strlen($userQuestion)]);
+
 
             // 4. Token Limit Check
             Log::info('Step 4: Checking token limit');
@@ -80,19 +87,21 @@ class VoiceToSqlService
                 throw new Exception('Token limit exceeded.');
             }
 
+
             // 5. Generate SQL
             Log::info('Step 5: Generating SQL');
-            $agentResponse = $this->generateSql($userQuestion);
+            $agentResponse = $this->generateSql($userQuestion, $provider, $model);
 
             if(empty($agentResponse)){
                 throw new Exception('MySql Agent, Failed!');
             }
-            
             Log::info('SQL generated', ['agentResponse' => $agentResponse]);
 
+
             // 6. Safety Check
-            Log::info('Step 6: Validating SQL safety');
-            $this->validateSqlSafety($agentResponse['sql']);
+            // Log::info('Step 6: Validating SQL safety');
+            // $this->validateSqlSafety($agentResponse['sql']); // Will inform user -> Query is unsafe if non SELECT Query come
+
 
             // 7. Cleanup
             // ==================== IMPORTANT: RECORD TOKEN USAGE ====================
@@ -100,24 +109,28 @@ class VoiceToSqlService
             $this->tokenManager->record(
                 $request->ip(),
                 $agentResponse['tokens']['input'],
-                $agentResponse['tokens']['output']
+                $agentResponse['tokens']['output'],
+                $provider,
+                $model
             );
             // =====================================================================
 
+
             // 8. Cleanup
-            Log::info('Step 9: Cleaning up audio file');
+            Log::info('Step 8: Cleaning up audio file');
             $this->cleanupAudio($audioPath);
+
 
             Log::info('VoiceToSql process completed successfully');
             return $this->successResponse($userQuestion, $agentResponse['sql']);
 
         } catch (Exception $e) {
             $this->cleanupAudio($audioPath);
-
             Log::error('VoiceToSql failed', [
                 'error'         => $e->getMessage(),
                 'user_question' => $userQuestion,
-                'sql'           => $sql
+                'sql'           => $sql,
+                'trace'         => $e->getTrace()
             ]);
 
             return $this->errorResponse($e, $userQuestion, $sql);
@@ -141,13 +154,21 @@ class VoiceToSqlService
         return trim((string) $transcript);
     }
 
-    private function generateSql(string $userQuestion)
+    private function generateSql(string $userQuestion, $provider = 'openai', $model = "gpt-4o-mini")
     {
         // Step 1: Init agent
         $agent = new MySqlExpert();
 
         // Step 2: Call AI (LLM call)
-        $agentResponse = $agent->prompt($userQuestion);
+        // $agentResponse = $agent->prompt($userQuestion);
+
+        $agentResponse = $agentResponse = $agent->prompt(
+            $userQuestion,
+            [],            // attachments
+            $provider,
+            $model
+        );
+
 
         // Step 3: Extract SQL
         $sql = (string) $agentResponse;
@@ -169,7 +190,7 @@ class VoiceToSqlService
         ];
     }
 
-    // will need below in futute
+    // will need below in futute for token calculations
     // private function generateSql(string $userQuestion)
     // {
     //     // Step 1: Init agent
@@ -230,7 +251,7 @@ class VoiceToSqlService
             'user_question'   => $userQuestion,
             'generated_sql'   => $sql,
             'row_count'       => 0,
-            // 'results_preview' => ,
+            'results_preview' => 1,
             'spoken_summary'  => "Here are the results for: {$userQuestion}",
         ]);
     }

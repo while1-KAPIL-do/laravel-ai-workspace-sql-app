@@ -5,29 +5,31 @@ use App\Ai\Agents\MySqlExpert;
 use App\Http\Controllers\TokenAnalyticsController;
 use Laravel\Ai\Transcription;
 use Laravel\Ai\Audio;
-
 use App\Ai\Tools\GetDatabaseSchema;
 use Laravel\Ai\Tools\Request as AIReq;
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-
 use App\Http\Controllers\VoiceToSqlController;
 use App\Services\Token\PythonTokenizerClient;
+use App\Http\Controllers\SchemaController;
+
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+
+Route::prefix('/schema')->group(function () {
+    Route::post('/upload', [SchemaController::class, 'uploadSchema'])->name('schema.upload');
+    Route::post('/execute-sql', [SchemaController::class, 'executeSql']);
+    Route::get('/analytics/schema', [SchemaController::class, 'dbSchema']);
+});
 
 
 Route::prefix('ai')->group(function () {
     Route::post('/sql-assitance', [VoiceToSqlController::class, 'process'])->name('ai-sql-assitance');
-    Route::get('/sql-assitance', function () {
-        return view('ai.sql-assitance');
-    });
-    Route::post('/execute-sql', [VoiceToSqlController::class, 'executeSql']);
-    Route::get('/analytics/schema', [VoiceToSqlController::class, 'dbSchema']);
-});
-
-Route::get('/', function () {
-    return view('welcome');
+    Route::get('/sql-assitance', [VoiceToSqlController::class, 'getPageData'])->name('ai-sql-assitance-index');
 });
 
 // Token Dashboard - api.php

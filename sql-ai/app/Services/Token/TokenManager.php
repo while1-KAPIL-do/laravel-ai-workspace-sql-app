@@ -51,17 +51,38 @@ class TokenManager
         return ['allowed' => true, 'tokens' => $estimated];
     }
 
-    public function record(string $ip, int $inputTokens, int $outputTokens, string $model = 'gpt-4', string $provider = 'openai'): void
-    {
-        $pricing = config("llm.llm_pricing.$provider.$model") 
-                ?? config("llm.llm_pricing.default");
+    public function record(
+        string $ip,
+        int $inputTokens,
+        int $outputTokens,
+        string $provider = 'openai',
+        string $model = 'gpt-4o-mini'
+    ): void {
 
-        $inputCostPer1k = $pricing['input'];
-        $outputCostPer1k = $pricing['output'];
+        // Get pricing safely
+        $pricing = config("llm_pricing.$provider.$model.pricing")
+            ?? config("llm_pricing.default.pricing");
 
-        $cost = ($inputTokens / 1000 * $inputCostPer1k)
-            + ($outputTokens / 1000 * $outputCostPer1k);
+        $inputCostPer1k = $pricing['input'] ?? 0;
+        $outputCostPer1k = $pricing['output'] ?? 0;
 
-        $this->usageService->addUsage($ip, $inputTokens, $outputTokens, $cost, $model, $provider);
+        // Calculate cost
+        $inputCost = ($inputTokens / 1000) * $inputCostPer1k;
+        $outputCost = ($outputTokens / 1000) * $outputCostPer1k;
+
+        $cost = $inputCost + $outputCost;
+
+        // Round (important for billing)
+        $cost = round($cost, 6);
+
+        // Save usage
+        $this->usageService->addUsage(
+            $ip,
+            $inputTokens,
+            $outputTokens,
+            $cost,
+            $provider,
+            $model
+        );
     }
 }
