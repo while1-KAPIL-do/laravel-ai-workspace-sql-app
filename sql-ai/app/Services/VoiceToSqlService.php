@@ -39,9 +39,7 @@ class VoiceToSqlService
 
             // 2. Restriction check
             if (LlmConfig::isRestricted($provider, $model)) {
-                return response()->json([
-                    'error' => 'This model is restricted. Please contact to admin or choose a cheaper model.'
-                ], 403);
+                throw new Exception("This model is restricted. Please contact to admin or choose a cheaper model!");
             }
 
             if (

@@ -22,8 +22,8 @@ const modelMapping = {
 // ── Refresh interval ──────────────────────────────────────────
 function getRefreshInterval() {
     const isLocal    = (window.APP_ENV === 'local' || window.APP_ENV === 'development');
-    const intervalMs = isLocal ? 30000 : 86400000;
-    const intervalText = isLocal ? '30 seconds' : '24 hours';
+    const intervalMs = isLocal ? 30000 : 3600000;
+    const intervalText = isLocal ? '30 seconds' : '1 hours';
 
     document.getElementById('footer-refresh-text').innerHTML =
         `Data refreshes automatically every ${intervalText} • <span class="cursor-pointer underline" onclick="loadData()">Refresh Now</span>`;
@@ -31,10 +31,14 @@ function getRefreshInterval() {
 }
 
 // ── Filters ───────────────────────────────────────────────────
+let filtersData = {};
+
 async function loadFilters() {
     try {
         const res  = await fetch('/analytics/filters');
         const data = await res.json();
+
+        filtersData = data;
         renderProviderFilter(data.providers || []);
         renderModelFilter([]);
     } catch (e) {
@@ -88,7 +92,7 @@ function renderModelFilter(models) {
 
 function setProvider(provider) {
     selectedProvider = provider;
-    selectedModel    = 'all';   // Reset model when provider changes
+    selectedModel    = 'all';
 
     document.querySelectorAll('[id^="provider-"]').forEach(btn => {
         btn.classList.remove('active', 'bg-cyan-500', 'text-white', 'shadow-sm');
@@ -96,8 +100,14 @@ function setProvider(provider) {
             btn.classList.add('active', 'bg-cyan-500', 'text-white', 'shadow-sm');
         }
     });
+    
+    // Fetch models dynamically from API response
+    let models = [];
 
-    const models = modelMapping[provider] || [];
+    if (provider !== 'all' && filtersData.models) {
+        models = filtersData.models || [];
+    }
+
     renderModelFilter(models);
     loadData();
 }
