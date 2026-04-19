@@ -11,6 +11,11 @@ class TokenAnalyticsController extends Controller
         protected TokenAnalyticsService $service
     ) {}
 
+    public function getPageData(Request $request)
+    {
+        return view('token-dashboard.index');
+    }
+
     public function summary(Request $request)
     {
         return response()->json(

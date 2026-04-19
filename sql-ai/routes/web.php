@@ -19,17 +19,22 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::prefix('ai')->group(function () {
+
+    # APP | AI | SQL Assitance
+    Route::post('/sql-assitance', [VoiceToSqlController::class, 'process'])->name('ai-sql-assitance');
+    Route::get('/sql-assitance', [VoiceToSqlController::class, 'getPageData'])->name('ai-sql-assitance-index');
+
+    
+    # APP | AI | TOKEN Dashboard
+    Route::get('/token-dashboard', [TokenAnalyticsController::class, 'getPageData'])->name('ai-token-dashboard');
+
+});
 
 Route::prefix('/schema')->group(function () {
     Route::post('/upload', [SchemaController::class, 'uploadSchema'])->name('schema.upload');
     Route::post('/execute-sql', [SchemaController::class, 'executeSql']);
     Route::get('/analytics/schema', [SchemaController::class, 'dbSchema']);
-});
-
-
-Route::prefix('ai')->group(function () {
-    Route::post('/sql-assitance', [VoiceToSqlController::class, 'process'])->name('ai-sql-assitance');
-    Route::get('/sql-assitance', [VoiceToSqlController::class, 'getPageData'])->name('ai-sql-assitance-index');
 });
 
 Route::prefix('analytics')->group(function () {
@@ -41,11 +46,6 @@ Route::prefix('analytics')->group(function () {
     Route::get('/cost-breakdown', [TokenAnalyticsController::class, 'costBreakdown']);
     Route::get('/filters', [TokenAnalyticsController::class, 'filters']);
 });
-
-Route::get('/dashboard/tokens', function () {
-    return view('token-dashboard.index');
-});
-
 
 ///////////////////////////////// TEST ROUTES /////////////////////////////////
 
