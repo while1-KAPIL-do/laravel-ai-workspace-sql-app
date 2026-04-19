@@ -32,19 +32,9 @@ Route::prefix('ai')->group(function () {
     Route::get('/sql-assitance', [VoiceToSqlController::class, 'getPageData'])->name('ai-sql-assitance-index');
 });
 
-// Token Dashboard - api.php
-Route::prefix('analytics')->group(function () {
-    Route::get('/summary', [TokenAnalyticsController::class, 'summary']);
-    Route::get('/daily', [TokenAnalyticsController::class, 'daily']);
-    Route::get('/top-ips', [TokenAnalyticsController::class, 'topIps']);
-    Route::get('/top-users', [TokenAnalyticsController::class, 'topUsers']);
-    Route::get('/cost', [TokenAnalyticsController::class, 'cost']);
-    Route::get('/cost-breakdown', [TokenAnalyticsController::class, 'costBreakdown']);
-    Route::get('/filters', [TokenAnalyticsController::class, 'filters']);
-});
 
 Route::get('/dashboard/tokens', function () {
-    return view('analytics.dashboard');
+    return view('token-dashboard.index');
 });
 
 

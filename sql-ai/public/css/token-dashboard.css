@@ -1,0 +1,33 @@
+/* =========================================================
+   Token Dashboard — Stylesheet
+   public/css/token-dashboard.css
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body { font-family: 'Inter', system-ui, sans-serif; }
+
+/* ── Chart container ──────────────────────────────────────── */
+.chart-container {
+    position: relative;
+    height: 420px;
+    width: 100%;
+}
+
+/* ── Summary cards ────────────────────────────────────────── */
+.card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-hover:hover {
+    transform: translateY(-4px);
+}
+
+/* ── Filter buttons ───────────────────────────────────────── */
+.filter-btn {
+    transition: all 0.2s;
+}
+.filter-btn.active {
+    background-color: #22d3ee !important;
+    color: #0f172a !important;
+    font-weight: 600;
+}

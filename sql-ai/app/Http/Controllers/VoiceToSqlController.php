@@ -82,7 +82,7 @@ class VoiceToSqlController extends Controller
             }
         }
 
-        return view('ai.sql-assitance', compact('aiProviders'));
+        return view('sql-assistant.index', compact('aiProviders'));
     }
 
 }

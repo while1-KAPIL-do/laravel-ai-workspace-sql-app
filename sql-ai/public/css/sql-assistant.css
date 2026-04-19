@@ -1,0 +1,125 @@
+/* =========================================================
+   SQL AI Voice Assistant — Stylesheet
+   resources/views/sql-assistant/ companion CSS
+   ========================================================= */
+
+body { font-family: 'Inter', system-ui, sans-serif; }
+
+/* ── Schema panel ─────────────────────────────────────────── */
+.schema-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.schema-body.open { max-height: 600px; }
+.chevron-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.chevron-icon.open { transform: rotate(180deg); }
+
+/* ── Table chips ──────────────────────────────────────────── */
+.table-chip { transition: all 0.18s; cursor: pointer; }
+.table-chip:hover { border-color: #22d3ee !important; }
+.table-chip.active { border-color: #22d3ee !important; background-color: rgba(34,211,238,0.06) !important; }
+.table-chip.active .chip-name { color: #22d3ee !important; }
+
+/* ── Mode cards ───────────────────────────────────────────── */
+.mode-card {
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+.mode-card:hover { border-color: #22d3ee !important; }
+.mode-card.active {
+    border-color: #22d3ee !important;
+    border-width: 1.5px !important;
+    background-color: rgba(34,211,238,0.05) !important;
+}
+.mode-card.active .mode-icon-wrap {
+    background-color: rgba(34,211,238,0.15) !important;
+}
+.mode-card.active .mode-label { color: #22d3ee !important; }
+
+/* ── Input panels ─────────────────────────────────────────── */
+.input-panel { display: none; }
+.input-panel.active { display: block; }
+
+.composer-box { transition: border-color 0.2s; }
+.composer-box:focus-within { border-color: #22d3ee !important; }
+
+#queryText {
+    resize: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ── Mic ──────────────────────────────────────────────────── */
+.mic-btn { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.mic-btn.recording {
+    animation: pulse-rec 1.5s infinite;
+    background-color: #ef4444 !important;
+    border-color: #ef4444 !important;
+    color: #fff !important;
+}
+@keyframes pulse-rec {
+    0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50%      { box-shadow: 0 0 0 12px rgba(239,68,68,0); }
+}
+
+/* ── Upload zone ──────────────────────────────────────────── */
+.upload-zone { transition: border-color 0.2s, background-color 0.2s; }
+.upload-zone:hover {
+    border-color: #22d3ee !important;
+    background-color: rgba(34,211,238,0.03) !important;
+}
+.upload-zone.has-file {
+    border-style: solid !important;
+    border-color: #22d3ee !important;
+}
+
+/* ── Send button disabled ─────────────────────────────────── */
+.send-btn:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+}
+
+/* ── Fade in ──────────────────────────────────────────────── */
+.fade-in { animation: fadeIn 0.4s cubic-bezier(0.4,0,0.2,1); }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── SQL pre ──────────────────────────────────────────────── */
+pre#sqlQuery {
+    font-family: 'JetBrains Mono','Fira Code','Courier New',monospace;
+    font-size: 0.82rem;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ── Column rows ──────────────────────────────────────────── */
+.col-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid;
+}
+.col-row:last-child { border-bottom: none; }
+
+/* ── AI Selector dropdown animation ──────────────────────── */
+.ai-dropdown {
+    transform-origin: top left;
+    transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.4,0,0.2,1);
+}
+.ai-dropdown.hidden {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+    pointer-events: none;
+}
+.ai-dropdown:not(.hidden) {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
