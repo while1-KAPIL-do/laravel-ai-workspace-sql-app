@@ -18,6 +18,7 @@ class SchemaModel extends Model
         'tables_count',
         'columns_count',
         'is_active',
+        'estimated_tokens'
     ];
     
 

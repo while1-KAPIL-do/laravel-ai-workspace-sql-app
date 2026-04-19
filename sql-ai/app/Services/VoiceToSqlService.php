@@ -154,38 +154,74 @@ class VoiceToSqlService
         return trim((string) $transcript);
     }
 
-    private function generateSql(string $userQuestion, $provider = 'openai', $model = "gpt-4o-mini")
-    {
-        // Step 1: Init agent
-        $agent = new MySqlExpert();
+    
+    public function generateSql(
+        string $userQuestion,
+        string $provider = 'openai',
+        string $model    = 'gpt-4o-mini'
+    ): array {
+        $agent       = new MySqlExpert();
+        $totalInput  = 0;
+        $totalOutput = 0;
+        $attempts    = 0;
+        $lastSql     = '';
+        $lastErrors  = [];
 
-        // Step 2: Call AI (LLM call)
-        // $agentResponse = $agent->prompt($userQuestion);
+        $question = $userQuestion;
 
-        $agentResponse = $agentResponse = $agent->prompt(
-            $userQuestion,
-            [],            // attachments
-            $provider,
-            $model
-        );
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $attempts++;
 
+            // On retries, append the validation errors so the agent self-corrects
+            $prompt = $attempt === 1
+                ? $question
+                : $question . "\n\n[CORRECTION REQUIRED] Your previous SQL had these errors:\n"
+                  . implode("\n", array_map(fn($e) => "- {$e}", $lastErrors))
+                  . "\nFix only those errors. Return only the corrected SQL.";
 
-        // Step 3: Extract SQL
-        $sql = (string) $agentResponse;
+            $response = $agent->prompt($prompt, [], $provider, $model);
 
-        // Step 4: Safe extraction
-        $inputTokens = $agentResponse?->usage?->promptTokens ?? null;
-        $outputTokens = $agentResponse?->usage?->completionTokens ?? null;
+            $sql          = trim((string) $response);
+            $inputTokens  = $response?->usage?->promptTokens    ?? 0;
+            $outputTokens = $response?->usage?->completionTokens ?? 0;
 
+            $totalInput  += $inputTokens;
+            $totalOutput += $outputTokens;
+
+            // Validate the SQL against the real schema
+            $errors = $agent->validateOutput($sql);
+
+            if (empty($errors)) {
+                // Good SQL — return it
+                return [
+                    'instructions' => $agent->instructions(),
+                    'question' => $userQuestion,
+                    'sql'      => $sql,
+                    'attempts' => $attempts,
+                    'tokens'   => [
+                        'input'  => $totalInput,
+                        'output' => $totalOutput,
+                        'total'  => $totalInput + $totalOutput,
+                    ],
+                ];
+            }
+
+            // Not valid yet — store for next retry prompt
+            $lastSql    = $sql;
+            $lastErrors = $errors;
+        }
+
+        // Exhausted retries — return best attempt with error flag
         return [
-            'question' => $userQuestion,
-            'sql' => $sql,
-
-            // REAL tokens (no estimation)
-            'tokens' => [
-                'input' => $inputTokens,
-                'output' => $outputTokens,
-                'total' => $inputTokens + $outputTokens,
+            'instructions' => $agent->instructions(),
+            'question'        => $userQuestion,
+            'sql'             => $lastSql,
+            'attempts'        => $attempts,
+            'validation_errors' => $lastErrors,
+            'tokens'          => [
+                'input'  => $totalInput,
+                'output' => $totalOutput,
+                'total'  => $totalInput + $totalOutput,
             ],
         ];
     }

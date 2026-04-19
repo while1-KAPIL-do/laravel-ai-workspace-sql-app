@@ -428,3 +428,18 @@ async function handleAutoUpload() {
 
 // Expose to HTML inline onchange attribute
 window.handleAutoUpload = handleAutoUpload;
+
+
+// ── SQL | Copy to clipboard ────────────────────
+document.getElementById('copySqlBtn').addEventListener('click', function () {
+    const sqlText = document.getElementById('sqlQuery').innerText.trim();
+
+    navigator.clipboard.writeText(sqlText).then(() => {
+        const btn = this;
+        btn.innerHTML = '<i class="fas fa-check text-xs text-emerald-400"></i>';
+
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-copy text-xs"></i>';
+        }, 1500);
+    });
+});

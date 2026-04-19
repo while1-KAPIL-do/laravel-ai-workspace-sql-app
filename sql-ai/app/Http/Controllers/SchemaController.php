@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\SchemaModel;
-use App\Services\SqlSchemaParser;
 use Illuminate\Support\Facades\Log;
+use App\Ai\Support\SchemaParser;
+use App\Services\Token\PythonTokenizerClient;
+use Illuminate\Support\Facades\DB;
 
 class SchemaController extends Controller
 {
@@ -46,21 +48,34 @@ class SchemaController extends Controller
 
             // 3. Create the record
             // Note: Cleaned up substr_count to be slightly more reliable
+            $parsed = SchemaParser::parse($sql);
+            $compactSummary = SchemaParser::toCompactSummary($parsed);
+
+            $tokenizer = new PythonTokenizerClient();
+            $estimatedSchemaTokens = $tokenizer->getTokens($compactSummary);
+
             $schema = SchemaModel::create([
-                'user_id'       => null, // Good practice to link user if logged in
+                'user_id'       => null,
                 'session_id'    => $sessionId,
                 'file_path'     => $path,
-                'schema_json'   => null,
+                'schema_json'   => json_encode($parsed),
                 'raw_sql'       => $sql,
-                'tables_count'  => preg_match_all('/CREATE\s+TABLE/i', $sql),
-                'columns_count' => substr_count($sql, ','), 
+                'tables_count'  => count($parsed), // preg_match_all('/CREATE\s+TABLE/i', $sql),
+                'columns_count' => array_sum(
+                    array_map(fn($t) => count($t['columns']), $parsed)
+                ), //substr_count($sql, ','),
                 'is_active'     => true,
+                'estimated_tokens' => $estimatedSchemaTokens
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Schema uploaded and stored successfully',
-                'schema_id' => $schema->id,
+                'data'    => [
+                    'schema_id'               => $schema->id,
+                    'tables_count'            => count($parsed),
+                    'estimated_upload_tokens' => $estimatedSchemaTokens,
+                ]
             ]);
 
         } catch (\Throwable $e) {
