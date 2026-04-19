@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\VoiceToSqlController;
 use App\Services\Token\PythonTokenizerClient;
 use App\Http\Controllers\SchemaController;
-
+use App\Services\VoiceToSqlService;
 
 Route::get('/', function () {
     return view('welcome');
@@ -32,6 +32,15 @@ Route::prefix('ai')->group(function () {
     Route::get('/sql-assitance', [VoiceToSqlController::class, 'getPageData'])->name('ai-sql-assitance-index');
 });
 
+Route::prefix('analytics')->group(function () {
+    Route::get('/summary', [TokenAnalyticsController::class, 'summary']);
+    Route::get('/daily', [TokenAnalyticsController::class, 'daily']);
+    Route::get('/top-ips', [TokenAnalyticsController::class, 'topIps']);
+    Route::get('/top-users', [TokenAnalyticsController::class, 'topUsers']);
+    Route::get('/cost', [TokenAnalyticsController::class, 'cost']);
+    Route::get('/cost-breakdown', [TokenAnalyticsController::class, 'costBreakdown']);
+    Route::get('/filters', [TokenAnalyticsController::class, 'filters']);
+});
 
 Route::get('/dashboard/tokens', function () {
     return view('token-dashboard.index');
@@ -39,6 +48,20 @@ Route::get('/dashboard/tokens', function () {
 
 
 ///////////////////////////////// TEST ROUTES /////////////////////////////////
+
+Route::get('/test/generate-sql', function () {
+    // Check what VoiceToSqlService __construct() expects
+    // and pass it here — e.g. if it expects a repository or another service:
+    $service = app(VoiceToSqlService::class); // Laravel resolves dependencies automatically
+
+    $result = $service->generateSql(
+        userQuestion: 'show me all employees whos departments is tech',
+        provider:     'openai',
+        model:        'gpt-4o-mini'
+    );
+
+    return response()->json($result, 200, [], JSON_PRETTY_PRINT);
+});
 
 Route::get('/test-schema-tokens', function () {
     $tool = new GetDatabaseSchema();

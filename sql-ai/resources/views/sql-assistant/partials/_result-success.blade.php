@@ -28,19 +28,36 @@
 
     {{-- SQL code block --}}
     <div class="relative">
-        <span class="absolute top-3 right-3 z-10 text-xs font-semibold px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 tracking-wider uppercase">SQL</span>
-        <pre id="sqlQuery" class="bg-slate-950 text-emerald-400 px-5 pt-5 pb-5 rounded-2xl border border-slate-800 overflow-x-auto">{{ $result['generated_sql'] ?? '' }}</pre>
+
+        <!-- SQL tag (TOP RIGHT) -->
+        <span class="absolute top-3 right-3 z-10 text-xs font-semibold px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 tracking-wider uppercase">
+            SQL
+        </span>
+
+        <!-- Copy button (BOTTOM RIGHT) -->
+        <button id="copySqlBtn"
+                class="absolute bottom-3 right-3 z-10 p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition text-slate-300 hover:text-white"
+                title="Copy SQL">
+            <i class="fas fa-copy text-xs"></i>
+        </button>
+
+        <!-- SQL block -->
+        <pre id="sqlQuery"
+            class="bg-slate-950 text-emerald-400 px-5 pt-5 pb-12 rounded-2xl border border-slate-800 overflow-x-auto"
+            >{{ $result['generated_sql'] ?? '' }}
+        </pre>
+
     </div>
 
     {{-- Execute button --}}
-    <div class="mt-5">
+    <!-- <div class="mt-5">
         <button id="executeSqlBtn"
                 class="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold text-white transition-all hover:opacity-90"
                 style="background:linear-gradient(135deg,#10b981,#059669);">
             <i class="fas fa-play text-xs"></i>
             Execute SQL
         </button>
-    </div>
+    </div> -->
 
     {{-- JS-rendered results table injected here by sql-assistant.js --}}
     <div id="executionResult" class="mt-5"></div>
