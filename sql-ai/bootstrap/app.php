@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\TokenMiddleware;
+use App\Providers\RateLimiterServiceProvider;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,9 +14,18 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
          $middleware->alias([
-            'token.limit' => \App\Http\Middleware\TokenMiddleware::class,
+            'token.limit' => TokenMiddleware::class,
         ]);
+
+        $middleware->prependToGroup(
+            'web',
+            \App\Http\Middleware\BlockedIpMiddleware::class
+        );
+        
     })
+    ->withProviders([
+        RateLimiterServiceProvider::class,
+    ])
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
