@@ -56,6 +56,7 @@ Route::middleware(['throttle:web-general'])->prefix('analytics')->group(function
 
 ///////////////////////////////// TEST ROUTES /////////////////////////////////
 
+/////////// TEST -- IP Blocking
 // // TEST ONLY - remove after testing
 // Route::get('/test/ip-block', function () {
 //     return response()->json([
@@ -80,6 +81,27 @@ Route::middleware(['throttle:web-general'])->prefix('analytics')->group(function
 //         'ip'     => request()->ip(),
 //     ]);
 // })->middleware('throttle:web-general');
+
+/////////// TEST -- Session Blocking
+// // TEST ONLY — remove after testing
+// Route::get('/test/session', function () {
+//     return response()->json([
+//         'session_id'       => session()->getId(),
+//         'bound_ip'         => session('_bound_ip'),
+//         'session_created'  => session('_session_created'),
+//         'last_regenerated' => session('_last_regenerated'),
+//         'current_ip'       => request()->ip(),
+//     ]);
+// });
+
+// Route::get('/test/session-regenerate', function () {
+//     $oldId = session()->getId();
+//     session(['_last_regenerated' => 0]); // force regeneration
+//     return response()->json([
+//         'old_session_id' => $oldId,
+//         'message'        => 'Reload the /test/session route to see new ID',
+//     ]);
+// });
 
 
 

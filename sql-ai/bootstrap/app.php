@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'web',
             \App\Http\Middleware\BlockedIpMiddleware::class
         );
+
+        $middleware->appendToGroup(
+            'web', 
+            \App\Http\Middleware\SessionIntegrityMiddleware::class
+        );
         
     })
     ->withProviders([
