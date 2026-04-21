@@ -14,11 +14,16 @@ class RateLimiterServiceProvider extends ServiceProvider
     const RATE_LIMIT_ON_AI_OPERATIONS       = 10;
     const RATE_LIMIT_ON_SCHEMA_OPERATIONS   = 5;
 
+    const RATE_LIMIT_ON_LOCAL_DEV = 10000;
+
     public function boot(): void
     {
+        $isProd = env('APP_ENV') === 'production';
+
         // ── General web routes — 60 requests per minute ───────────
-        RateLimiter::for('web-general', function (Request $request) {
-            return Limit::perMinute(self::RATE_LIMIT_ON_WEB_OPERATIONS)
+        RateLimiter::for('web-general', function (Request $request) use ($isProd) {
+            $limit = $isProd ? self::RATE_LIMIT_ON_WEB_OPERATIONS : self::RATE_LIMIT_ON_LOCAL_DEV;
+            return Limit::perMinute($limit)
                 ->by($request->ip())
                 ->response(fn() => response()->json([
                     'error' => 'Too many requests. Slow down.',
@@ -26,8 +31,9 @@ class RateLimiterServiceProvider extends ServiceProvider
         });
 
         // ── AI / SQL routes — 10 per minute, auto-block on abuse ──
-        RateLimiter::for('ai', function (Request $request) {
-            return Limit::perMinute(self::RATE_LIMIT_ON_AI_OPERATIONS)
+        RateLimiter::for('ai', function (Request $request) use ($isProd) {
+            $limit = $isProd ? self::RATE_LIMIT_ON_WEB_OPERATIONS : self::RATE_LIMIT_ON_LOCAL_DEV;
+            return Limit::perMinute($limit)
                 ->by($request->ip())
                 ->response(function (Request $request, array $headers) {
                     $ip       = $request->ip();
@@ -55,8 +61,9 @@ class RateLimiterServiceProvider extends ServiceProvider
         });
 
         // ── Schema upload — 5 uploads per hour ────────────────────
-        RateLimiter::for('schema-upload', function (Request $request) {
-            return Limit::perHour(self::RATE_LIMIT_ON_SCHEMA_OPERATIONS)
+        RateLimiter::for('schema-upload', function (Request $request) use ($isProd) {
+            $limit = $isProd ? self::RATE_LIMIT_ON_WEB_OPERATIONS : self::RATE_LIMIT_ON_LOCAL_DEV;
+            return Limit::perHour($limit)
                 ->by($request->ip())
                 ->response(fn() => response()->json([
                     'error' => 'Upload limit reached. Try again in an hour.',

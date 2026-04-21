@@ -17,20 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'token.limit' => TokenMiddleware::class,
         ]);
 
-        $middleware->prependToGroup(
-            'web',
-            \App\Http\Middleware\BlockedIpMiddleware::class
-        );
-
-        $middleware->appendToGroup(
-            'web', 
-            \App\Http\Middleware\SessionIntegrityMiddleware::class
-        );
-
-        $middleware->appendToGroup(
-            'web', 
-            \App\Http\Middleware\DeviceFingerprintMiddleware::class
-        );
+        if (env('APP_ENV') === 'production') {
+            $middleware->prependToGroup('web',  \App\Http\Middleware\BlockedIpMiddleware::class);
+            $middleware->appendToGroup('web',   \App\Http\Middleware\SessionIntegrityMiddleware::class);
+            $middleware->appendToGroup('web',   \App\Http\Middleware\DeviceFingerprintMiddleware::class);
+        }
 
         $middleware->validateCsrfTokens();
         
@@ -46,6 +37,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Only handle CSRF failures (419)
         if ($e->getStatusCode() !== 419) {
             return null; // let Laravel handle everything else normally
+        }
+
+        if (env('APP_ENV') === 'local') {
+            return response()->json(['error' => 'CSRF token mismatch.'], 419);
         }
 
         $ip       = $request->ip();
