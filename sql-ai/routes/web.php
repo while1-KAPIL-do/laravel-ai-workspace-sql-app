@@ -56,8 +56,9 @@ Route::middleware(['throttle:web-general'])->prefix('analytics')->group(function
 
 ///////////////////////////////// TEST ROUTES /////////////////////////////////
 
-/////////// TEST -- IP Blocking
-// // TEST ONLY - remove after testing
+///////////////// SECURITY WEB ROUTES - STR /////////////////
+
+/////////// 1. TEST -- IP Blocking
 // Route::get('/test/ip-block', function () {
 //     return response()->json([
 //         'status' => 'allowed',
@@ -65,7 +66,6 @@ Route::middleware(['throttle:web-general'])->prefix('analytics')->group(function
 //     ]);
 // });
 
-// // TEST ONLY - remove after testing
 // Route::get('/test/throttle-ai', function () {
 //     return response()->json([
 //         'status'  => 'ok',
@@ -74,7 +74,6 @@ Route::middleware(['throttle:web-general'])->prefix('analytics')->group(function
 //     ]);
 // })->middleware('throttle:ai');
 
-// // routes/web.php — TEST ONLY
 // Route::get('/test/throttle-web', function () {
 //     return response()->json([
 //         'status' => 'ok',
@@ -82,8 +81,8 @@ Route::middleware(['throttle:web-general'])->prefix('analytics')->group(function
 //     ]);
 // })->middleware('throttle:web-general');
 
-/////////// TEST -- Session Blocking
-// // TEST ONLY — remove after testing
+
+/////////// 2. TEST -- Session Blocking
 // Route::get('/test/session', function () {
 //     return response()->json([
 //         'session_id'       => session()->getId(),
@@ -104,6 +103,42 @@ Route::middleware(['throttle:web-general'])->prefix('analytics')->group(function
 // });
 
 
+/////////// 3. TEST -- CSRF Blocking
+// Route::get('/test/csrf-form', function () {
+//     return response('<form method="POST" action="/test/csrf-post">
+//         ' . csrf_field() . '
+//         <button type="submit">Submit with valid CSRF</button>
+//     </form>');
+// });
+
+// Route::get('/test/csrf-attack', function () {
+//     return response('
+//         <script>
+//             fetch("/test/csrf-post", {
+//                 method: "POST",
+//                 headers: {
+//                     "Content-Type": "application/json",
+//                     "X-CSRF-TOKEN": "fake-bad-token-123",
+//                 },
+//                 body: JSON.stringify({ test: 1 })
+//             })
+//             .then(r => {
+//                 document.body.innerHTML = "Status: " + r.status;
+//                 return r.json();
+//             })
+//             .then(data => {
+//                 document.body.innerHTML += "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+//             });
+//         </script>
+//         <body>Sending bad CSRF request...</body>
+//     ');
+// });
+
+// Route::post('/test/csrf-post', function () {
+//     return response()->json(['status' => 'CSRF valid — request accepted']);
+// });
+
+///////////////// SECURITY WEB ROUTES - END /////////////////
 
 /////////////////////////////////////////////////////////////////////////////////
 
