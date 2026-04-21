@@ -19,7 +19,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::prefix('ai')->group(function () {
+
+# "throttle:ai" : AI SQL route - 10/min
+Route::middleware(['throttle:ai'])->prefix('ai')->group(function () {
 
     # APP | AI | SQL Assitance
     Route::post('/sql-assitance', [VoiceToSqlController::class, 'process'])->name('ai-sql-assitance');
@@ -31,13 +33,17 @@ Route::prefix('ai')->group(function () {
 
 });
 
-Route::prefix('/schema')->group(function () {
+
+# "throttle:schema-upload" : Schema upload - 5/hour
+Route::middleware(['throttle:schema-upload'])->prefix('/schema')->group(function () {
     Route::post('/upload', [SchemaController::class, 'uploadSchema'])->name('schema.upload');
     Route::post('/execute-sql', [SchemaController::class, 'executeSql']);
     Route::get('/analytics/schema', [SchemaController::class, 'dbSchema']);
 });
 
-Route::prefix('analytics')->group(function () {
+
+# "throttle:web-general" : Analytics routes - 60/min
+Route::middleware(['throttle:web-general'])->prefix('analytics')->group(function () {
     Route::get('/summary', [TokenAnalyticsController::class, 'summary']);
     Route::get('/daily', [TokenAnalyticsController::class, 'daily']);
     Route::get('/top-ips', [TokenAnalyticsController::class, 'topIps']);
@@ -47,7 +53,104 @@ Route::prefix('analytics')->group(function () {
     Route::get('/filters', [TokenAnalyticsController::class, 'filters']);
 });
 
+
 ///////////////////////////////// TEST ROUTES /////////////////////////////////
+
+///////////////// SECURITY WEB ROUTES - STR /////////////////
+
+/////////// 1. TEST -- IP Blocking
+// Route::get('/test/ip-block', function () {
+//     return response()->json([
+//         'status' => 'allowed',
+//         'your_ip' => request()->ip(),
+//     ]);
+// });
+
+// Route::get('/test/throttle-ai', function () {
+//     return response()->json([
+//         'status'  => 'ok',
+//         'message' => 'Request allowed',
+//         'ip'      => request()->ip(),
+//     ]);
+// })->middleware('throttle:ai');
+
+// Route::get('/test/throttle-web', function () {
+//     return response()->json([
+//         'status' => 'ok',
+//         'ip'     => request()->ip(),
+//     ]);
+// })->middleware('throttle:web-general');
+
+
+/////////// 2. TEST -- Session Blocking
+// Route::get('/test/session', function () {
+//     return response()->json([
+//         'session_id'       => session()->getId(),
+//         'bound_ip'         => session('_bound_ip'),
+//         'session_created'  => session('_session_created'),
+//         'last_regenerated' => session('_last_regenerated'),
+//         'current_ip'       => request()->ip(),
+//     ]);
+// });
+
+// Route::get('/test/session-regenerate', function () {
+//     $oldId = session()->getId();
+//     session(['_last_regenerated' => 0]); // force regeneration
+//     return response()->json([
+//         'old_session_id' => $oldId,
+//         'message'        => 'Reload the /test/session route to see new ID',
+//     ]);
+// });
+
+
+/////////// 3. TEST -- CSRF Blocking
+// Route::get('/test/csrf-form', function () {
+//     return response('<form method="POST" action="/test/csrf-post">
+//         ' . csrf_field() . '
+//         <button type="submit">Submit with valid CSRF</button>
+//     </form>');
+// });
+
+// Route::get('/test/csrf-attack', function () {
+//     return response('
+//         <script>
+//             fetch("/test/csrf-post", {
+//                 method: "POST",
+//                 headers: {
+//                     "Content-Type": "application/json",
+//                     "X-CSRF-TOKEN": "fake-bad-token-123",
+//                 },
+//                 body: JSON.stringify({ test: 1 })
+//             })
+//             .then(r => {
+//                 document.body.innerHTML = "Status: " + r.status;
+//                 return r.json();
+//             })
+//             .then(data => {
+//                 document.body.innerHTML += "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+//             });
+//         </script>
+//         <body>Sending bad CSRF request...</body>
+//     ');
+// });
+
+// Route::post('/test/csrf-post', function () {
+//     return response()->json(['status' => 'CSRF valid — request accepted']);
+// });
+
+/////////// 4. TEST -- Device Blocking
+Route::get('/test/device', function () {
+    return response()->json([
+        'status'      => 'allowed',
+        'fingerprint' => session('_device_fingerprint'),
+        'ip'          => request()->ip(),
+        'user_agent'  => request()->userAgent(),
+    ]);
+});
+
+///////////////// SECURITY WEB ROUTES - END /////////////////
+
+/////////////////////////////////////////////////////////////////////////////////
 
 Route::get('/test/generate-sql', function () {
     // Check what VoiceToSqlService __construct() expects
