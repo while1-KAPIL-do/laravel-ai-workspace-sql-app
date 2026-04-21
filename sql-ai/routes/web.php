@@ -138,6 +138,16 @@ Route::middleware(['throttle:web-general'])->prefix('analytics')->group(function
 //     return response()->json(['status' => 'CSRF valid — request accepted']);
 // });
 
+/////////// 4. TEST -- Device Blocking
+Route::get('/test/device', function () {
+    return response()->json([
+        'status'      => 'allowed',
+        'fingerprint' => session('_device_fingerprint'),
+        'ip'          => request()->ip(),
+        'user_agent'  => request()->userAgent(),
+    ]);
+});
+
 ///////////////// SECURITY WEB ROUTES - END /////////////////
 
 /////////////////////////////////////////////////////////////////////////////////

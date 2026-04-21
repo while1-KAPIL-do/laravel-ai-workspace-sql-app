@@ -24,3 +24,5 @@ Homestead.yaml
 Thumbs.db
 Security.md
 prompt.md
+/temp/*
+.env.prod

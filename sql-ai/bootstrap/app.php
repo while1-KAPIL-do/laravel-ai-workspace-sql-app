@@ -27,6 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SessionIntegrityMiddleware::class
         );
 
+        $middleware->appendToGroup(
+            'web', 
+            \App\Http\Middleware\DeviceFingerprintMiddleware::class
+        );
+
         $middleware->validateCsrfTokens();
         
     })
