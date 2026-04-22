@@ -1,39 +1,45 @@
+version: '3.8'
+
 services:
 
-  # PRODUCTION 
+  # EXISTING (unchanged but improved)
   sql_ai_app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: sql_ai_app
+    restart: always
     ports:
       - "8001:8000"
+    depends_on:
+      - mysql_shared
 
-  # LOCAL
-#   mysql_shared:
-#     image: mysql:8.0
-#     container_name: laravel_ai_mysql
-#     restart: always
-#     environment:
-#       MYSQL_ROOT_PASSWORD: root
-#       MYSQL_DATABASE: default_db
-#       MYSQL_USER: laravel
-#       MYSQL_PASSWORD: secret
-#     volumes:
-#       - mysql_shared_data:/var/lib/mysql
+  # NEW (green deployment)
+  app_green:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app_green
+    restart: always
+    ports:
+      - "8002:8000"
+    depends_on:
+      - mysql_shared
 
-#   sql_ai_app:
-#     build:
-#       context: .
-#       dockerfile: Dockerfile
-#     container_name: sql_ai_app
-#     working_dir: /var/www/html
-#     volumes:
-#       - ./sql-ai:/var/www/html
-#     ports:
-#       - "8001:8000"
-#     depends_on:
-#       - mysql_shared
+  # DATABASE (CRITICAL FIXES HERE)
+  mysql_shared:
+    image: mysql:8.0
+    container_name: laravel_ai_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: default_db
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql   # ✅ prevents data loss
 
-# volumes:
-#   mysql_shared_data:
+volumes:
+  mysql_data:
