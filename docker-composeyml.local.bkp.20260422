@@ -1,0 +1,78 @@
+version: "3.9"
+
+services:
+
+  mysql_shared:
+    image: mysql:8.0
+    container_name: laravel_ai_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: default_db
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+    volumes:
+      - mysql_shared_data:/var/lib/mysql
+    networks:
+      - app-network
+    
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: laravel_ai_phpmyadmin
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql_shared
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      - mysql_shared
+    networks:
+      - app-network
+
+  sql_ai_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sql_ai_app
+    working_dir: /var/www/html
+    volumes:
+      - ./sql-ai:/var/www/html
+    ports:
+      - "8001:8000"
+    depends_on:
+      mysql_shared:
+        condition: service_started
+      llm-service:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # FastAPI Token Service
+  llm-service:
+    build:
+      context: ./llm-service
+      dockerfile: Dockerfile
+    container_name: llm-service
+    ports:
+      - "5000:8000"
+    volumes:
+      - ./llm-service:/app   # for live reload
+    restart: always
+    networks:
+      - app-network
+    env_file:
+      - ./llm-service/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  mysql_shared_data:
+
+networks:
+  app-network:
+    driver: bridge

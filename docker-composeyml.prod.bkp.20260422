@@ -1,0 +1,38 @@
+services:
+
+  # EXISTING (DO NOT TOUCH)
+  sql_ai_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sql_ai_app
+    ports:
+      - "8001:8000"
+    depends_on:
+      - mysql_shared
+
+  # NEW (SAFE ADD)
+  app_green:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app_green
+    ports:
+      - "8002:8000"
+    depends_on:
+      - mysql_shared
+
+  mysql_shared:
+    image: mysql:8.0
+    container_name: laravel_ai_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: default_db
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+    ports:
+      - "3306:3306"
+
+
+

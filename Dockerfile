@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+COPY ./sql-ai /var/www/html
+
 WORKDIR /var/www/html
 
 CMD php artisan serve --host=0.0.0.0 --port=8000
