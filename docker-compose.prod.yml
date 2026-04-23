@@ -20,10 +20,11 @@ services:
     mem_limit: 700m
     cpus: 0.5
 
-  llm-service:
-    build:
-      context: ./llm-service
-      dockerfile: Dockerfile
+  llm-service:    
+    image: llm-service:latest
+    # build:
+    #   context: ./llm-service
+    #   dockerfile: Dockerfile
     container_name: llm-service
     restart: always
     ports:
@@ -41,9 +42,10 @@ services:
       retries: 5
 
   sql_ai_app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: sql_ai_app:latest
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: sql_ai_app
     restart: always
     ports:

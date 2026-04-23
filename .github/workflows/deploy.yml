@@ -29,7 +29,7 @@ jobs:
             docker compose --env-file .env -f docker-compose.prod.yml up -d --build
 
             echo "⏳ Waiting for MySQL..."
-            for i in {1..30}; do
+            for i in {1..60}; do
               docker exec laravel_ai_mysql mysqladmin ping -h"localhost" --silent && break
               echo "Waiting for MySQL... ($i)"
               sleep 2
