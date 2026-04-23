@@ -16,6 +16,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            echo "⏳ Waiting for EC2 to be fully ready..."
+            sleep 60
             cd laravel-ai-workspace-sql-app
 
             echo "📥 Pulling latest code..."
