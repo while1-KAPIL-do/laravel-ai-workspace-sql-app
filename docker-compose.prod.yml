@@ -17,7 +17,7 @@ services:
       - "3306:3306"
     networks:
       - app-network
-    mem_limit: 512m
+    mem_limit: 700m
     cpus: 0.5
 
   llm-service:
