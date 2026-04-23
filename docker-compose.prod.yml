@@ -12,11 +12,13 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      - mysql_shared_data:/var/lib/mysql   # named volume — data survives redeploy
+      - mysql_shared_data:/var/lib/mysql
     ports:
       - "3306:3306"
     networks:
       - app-network
+    mem_limit: 512m
+    cpus: 0.5
 
   llm-service:
     build:
@@ -30,6 +32,8 @@ services:
       - app-network
     env_file:
       - ./llm-service/.env
+    mem_limit: 512m
+    cpus: 0.5
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -53,28 +57,33 @@ services:
       - app-network
     env_file:
       - ./sql-ai/.env
+    mem_limit: 512m
+    cpus: 0.5
 
-  app_green:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: app_green
-    restart: always
-    ports:
-      - "8002:8000"
-    depends_on:
-      mysql_shared:
-        condition: service_started
-      llm-service:
-        condition: service_healthy
-    networks:
-      - app-network
-    env_file:
-      - ./sql-ai/.env
+  # ❌ DISABLED app_green for now (too heavy for your EC2)
+  # app_green:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: app_green
+  #   restart: always
+  #   ports:
+  #     - "8002:8000"
+  #   depends_on:
+  #     mysql_shared:
+  #       condition: service_started
+  #     llm-service:
+  #       condition: service_healthy
+  #   networks:
+  #     - app-network
+  #   env_file:
+  #     - ./sql-ai/.env
+  #   mem_limit: 512m
+  #   cpus: 0.5
 
 volumes:
   mysql_shared_data:
-    external: true    # protects data — must create once manually (see below)
+    external: true
 
 networks:
   app-network:
