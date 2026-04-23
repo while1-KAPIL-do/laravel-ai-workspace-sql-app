@@ -18,24 +18,25 @@ jobs:
           script: |
             cd laravel-ai-workspace-sql-app
 
+            echo "📥 Pulling latest code..."
             git pull origin main
 
-            docker-compose down
-            docker-compose up -d --build
+            echo "🐳 Building & updating containers (NO DOWN)..."
+            docker compose --env-file .env -f docker-compose.prod.yml up -d --build
 
             echo "⏳ Waiting for MySQL..."
-
             for i in {1..30}; do
               docker exec laravel_ai_mysql mysqladmin ping -h"localhost" --silent && break
               echo "Waiting for MySQL... ($i)"
               sleep 2
             done
 
-            echo "🔄 Restarting Laravel container..."
-            docker restart sql_ai_app
-
-            echo "🧹 Clearing config cache..."
+            echo "🧹 Clearing Laravel cache..."
             docker exec sql_ai_app php artisan config:clear
+            docker exec sql_ai_app php artisan cache:clear
+            docker exec sql_ai_app php artisan route:clear
 
             echo "🚀 Running migrations..."
             docker exec sql_ai_app php artisan migrate --force
+
+            echo "✅ Deployment completed!"
