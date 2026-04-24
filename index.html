@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Launching App...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen flex items-center justify-center">
+
+    <div class="text-center max-w-md px-6">
+
+        <!-- Spinner -->
+        <div id="spinner"
+             class="w-16 h-16 border-4 border-slate-700 border-t-cyan-400
+                    rounded-full animate-spin mx-auto mb-8"></div>
+
+        <!-- Status -->
+        <h1 class="text-2xl font-bold mb-2" id="title">Starting server...</h1>
+        <p class="text-slate-400 mb-6" id="subtitle">
+            This is a portfolio app on a sleeping server.<br>
+            It will be ready in about 60 seconds.
+        </p>
+
+        <!-- Countdown -->
+        <div class="text-5xl font-mono font-bold text-cyan-400 mb-6"
+             id="countdown">60</div>
+
+        <!-- Progress bar -->
+        <div class="w-full bg-slate-800 rounded-full h-2 mb-8">
+            <div id="progress"
+                 class="bg-cyan-400 h-2 rounded-full transition-all duration-1000"
+                 style="width: 0%"></div>
+        </div>
+
+        <p class="text-xs text-slate-500" id="statusText">Contacting server...</p>
+    </div>
+
+    <script>
+        // ── Config ────────────────────────────────────────────
+        const LAMBDA_URL = 'https://faj3rnm9e5.execute-api.ap-south-1.amazonaws.com/start-ec2';
+        const APP_URL    = 'http://13.126.63.96/ai/sql-assitance'; // your EC2 IP
+        const BOOT_TIME  = 60; // seconds to wait before redirecting
+
+        // ── State ─────────────────────────────────────────────
+        let secondsLeft  = BOOT_TIME;
+        let countdownTimer;
+
+        // ── Start EC2 via Lambda ──────────────────────────────
+        async function startServer() {
+            try {
+                const res  = await fetch(LAMBDA_URL);
+                const data = await res.json();
+
+                document.getElementById('statusText').textContent =
+                    `Server status: ${data.status}`;
+
+                if (data.status === 'running') {
+                    // Already running — go straight there
+                    redirectToApp();
+                    return;
+                }
+
+                // Starting — begin countdown
+                startCountdown(data.wait || BOOT_TIME);
+
+            } catch (e) {
+                document.getElementById('statusText').textContent =
+                    'Could not reach Lambda — check CORS settings.';
+            }
+        }
+
+        // ── Countdown ─────────────────────────────────────────
+        function startCountdown(seconds) {
+            secondsLeft = seconds;
+            updateDisplay();
+
+            countdownTimer = setInterval(() => {
+                secondsLeft--;
+                updateDisplay();
+
+                if (secondsLeft <= 0) {
+                    clearInterval(countdownTimer);
+                    checkAndRedirect();
+                }
+            }, 1000);
+        }
+
+        function updateDisplay() {
+            const elapsed  = BOOT_TIME - secondsLeft;
+            const progress = Math.min((elapsed / BOOT_TIME) * 100, 100);
+
+            document.getElementById('countdown').textContent =
+                secondsLeft > 0 ? secondsLeft : '✓';
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        // ── Check if EC2 is up, then redirect ─────────────────
+        async function checkAndRedirect() {
+            document.getElementById('title').textContent    = 'Almost ready...';
+            document.getElementById('subtitle').textContent = 'Checking server health...';
+            document.getElementById('statusText').textContent = 'Verifying...';
+
+            // Poll Lambda to confirm EC2 is running
+            let attempts = 0;
+            const poll   = setInterval(async () => {
+                attempts++;
+                try {
+                    const res  = await fetch(LAMBDA_URL);
+                    const data = await res.json();
+
+                    document.getElementById('statusText').textContent =
+                        `Attempt ${attempts}: ${data.status}`;
+
+                    if (data.status === 'running') {
+                        clearInterval(poll);
+                        redirectToApp();
+                    }
+                } catch (e) {
+                    // keep trying
+                }
+
+                if (attempts >= 10) {
+                    clearInterval(poll);
+                    document.getElementById('title').textContent =
+                        'Taking longer than usual...';
+                    document.getElementById('subtitle').innerHTML =
+                        `Try opening the app directly:<br>
+                         <a href="${APP_URL}" class="text-cyan-400 underline">${APP_URL}</a>`;
+                }
+            }, 5000); // check every 5 seconds
+        }
+
+        function redirectToApp() {
+            document.getElementById('title').textContent    = 'Ready!';
+            document.getElementById('subtitle').textContent = 'Redirecting you now...';
+            document.getElementById('countdown').textContent = '→';
+            document.getElementById('progress').style.width  = '100%';
+            document.getElementById('spinner').classList.add('border-t-emerald-400');
+
+            setTimeout(() => {
+                window.location.href = APP_URL;
+            }, 1500);
+        }
+
+        // ── Boot ──────────────────────────────────────────────
+        startServer();
+    </script>
+
+</body>
+</html>
