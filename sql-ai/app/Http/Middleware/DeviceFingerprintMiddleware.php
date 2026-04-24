@@ -11,6 +11,10 @@ class DeviceFingerprintMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
+        if (!config('security.device_fingerprint')) {
+            return $next($request);
+        }
+
         // Skip if no session available
         if (!$request->hasSession()) {
             return $next($request);
