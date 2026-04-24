@@ -10,6 +10,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// ── Health Check ───────────────────────────────────────────────────
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok'], 200);
+});
+
 // ── AI routes — 10 requests/min ───────────────────────────────
 Route::middleware(['throttle:ai'])->prefix('ai')->group(function () {
     Route::post('/sql-assitance',   [VoiceToSqlController::class,       'process'])->name('ai-sql-assitance');
