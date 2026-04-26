@@ -18,11 +18,11 @@
     <h1 class="text-2xl font-bold mb-2" id="title">Starting server...</h1>
     <p class="text-slate-400 mb-6">
         This app runs on a sleeping server.<br>
-        It will wake up in ~60 seconds.
+        It will wake up in ~20 seconds.
     </p>
 
     <div class="text-5xl font-mono font-bold text-cyan-400 mb-6"
-         id="countdown">60</div>
+         id="countdown">20</div>
 
     <div class="w-full bg-slate-800 rounded-full h-2 mb-8">
         <div id="progress"
@@ -34,87 +34,87 @@
 </div>
 
 <script>
-const LAMBDA_URL = 'https://faj3rnm9e5.execute-api.ap-south-1.amazonaws.com/start-ec2';
+const LAMBDA_URL = 'https://tinyurl.com/y5fxzy2j';
+const HEALTH_URL = 'https://www.kapillabs.com/health';
+const APP_URL    = 'https://www.kapillabs.com/ai/sql-assitance';
+const TOTAL_SECS = 20;
 
-// ⚠️ IMPORTANT: Use HTTPS domain (NOT IP ideally)
-const APP_URL = 'http://13.126.63.96/ai/sql-assitance';
+let secondsLeft = TOTAL_SECS;
+let redirecting  = false;
 
-let secondsLeft = 60;
-
-async function startServer() {
-    try {
-        const res = await fetch(LAMBDA_URL);
-        const data = await res.json();
-
-        document.getElementById('statusText').textContent =
-            `Server: ${data.status}`;
-
-        if (data.status === 'running') {
-            redirect();
-        } else {
-            startCountdown(60);
-        }
-
-    } catch (e) {
-        document.getElementById('statusText').textContent =
-            'Lambda error (check CORS)';
-    }
+function redirect() {
+    if (redirecting) return;
+    redirecting = true;
+    document.getElementById('title').textContent      = 'Ready 🚀';
+    document.getElementById('statusText').textContent = 'Redirecting...';
+    document.getElementById('progress').style.width   = '100%';
+    window.location.href = APP_URL;
 }
 
-function startCountdown(time) {
-    secondsLeft = time;
-
-    const interval = setInterval(() => {
-        secondsLeft--;
-
-        document.getElementById('countdown').textContent = secondsLeft;
-        document.getElementById('progress').style.width =
-            ((60 - secondsLeft) / 60) * 100 + '%';
-
-        if (secondsLeft <= 0) {
-            clearInterval(interval);
-            checkServer();
-        }
-    }, 1000);
-}
-
-async function checkServer() {
-    document.getElementById('title').textContent = 'Checking server...';
-
-    let tries = 0;
+// ─── Health check using no-cors (opaque response) ────────────────────────────
+// With no-cors we can't read the body — but if the request doesn't throw,
+// the server is up and responding. That's enough to redirect.
+function pollHealth(label) {
+    let attempt = 0;
 
     const poll = setInterval(async () => {
-        tries++;
-
+        attempt++;
+        document.getElementById('statusText').textContent =
+            `${label} (attempt ${attempt})...`;
         try {
-            const res = await fetch(LAMBDA_URL);
+            const res = await fetch(HEALTH_URL, { cache: 'no-store' }); // no mode:'no-cors'
             const data = await res.json();
-
-            document.getElementById('statusText').textContent =
-                `Try ${tries}: ${data.status}`;
-
-            if (data.status === 'running') {
+            if (res.ok && data.status === 'ok') {  // res.ok = true only on 200, not 503
                 clearInterval(poll);
                 redirect();
             }
-
-        } catch {}
-
-        if (tries > 10) {
-            clearInterval(poll);
-            document.getElementById('statusText').innerHTML =
-                `<a href="${APP_URL}" class="underline text-cyan-400">Open manually</a>`;
+        } catch {
+            // fetch threw = server still not reachable, keep polling
         }
+    }, 2000);
 
-    }, 5000);
+    return poll;
 }
 
-function redirect() {
-    document.getElementById('title').textContent = 'Ready 🚀';
+// ─── Step 1: Trigger Lambda ──────────────────────────────────────────────────
+async function startServer() {
+    try {
+        const res  = await fetch(LAMBDA_URL);
+        const data = await res.json();
 
-    setTimeout(() => {
-        window.location.href = APP_URL;
-    }, 1500);
+        document.getElementById('statusText').textContent = `EC2: ${data.status}`;
+
+        if (data.status === 'running') {
+            document.getElementById('title').textContent     = 'Checking service...';
+            document.getElementById('countdown').textContent = '⚡';
+            pollHealth('Quick check');
+        } else {
+            startCountdown();
+        }
+
+    } catch (e) {
+        document.getElementById('statusText').textContent = 'Lambda error (check CORS)';
+    }
+}
+
+// ─── Step 2: Countdown (cosmetic) + health polling in parallel ───────────────
+function startCountdown() {
+    secondsLeft = TOTAL_SECS;
+
+    pollHealth('Checking'); // start health polling immediately, don't wait for countdown
+
+    const tickInterval = setInterval(() => {
+        secondsLeft--;
+        document.getElementById('countdown').textContent = secondsLeft;
+        document.getElementById('progress').style.width  =
+            ((TOTAL_SECS - secondsLeft) / TOTAL_SECS) * 100 + '%';
+
+        if (secondsLeft <= 0) {
+            clearInterval(tickInterval);
+            document.getElementById('title').textContent     = 'Almost ready...';
+            document.getElementById('countdown').textContent = '⏳';
+        }
+    }, 1000);
 }
 
 startServer();

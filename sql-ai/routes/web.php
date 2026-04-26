@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\VoiceToSqlController;
 use App\Http\Controllers\TokenAnalyticsController;
 use App\Http\Controllers\SchemaController;
@@ -11,14 +12,12 @@ Route::get('/', function () {
 });
 
 // ── Health Check ───────────────────────────────────────────────────
-Route::get('/health', function () {
-    return response()->json(['status' => 'ok'], 200);
-});
+Route::get('/health', [HealthController::class, 'getHealth']);
 
 // ── AI routes — 10 requests/min ───────────────────────────────
 Route::middleware(['throttle:ai'])->prefix('ai')->group(function () {
     Route::post('/sql-assitance',   [VoiceToSqlController::class,       'process'])->name('ai-sql-assitance');
-    Route::get('/sql-assitance',    [VoiceToSqlController::class,       'getPageData'])->name('ai-sql-assitance-index');
+    Route::get('/sql-assistant',    [VoiceToSqlController::class,       'getPageData'])->name('ai-sql-assitance-index');
     Route::get('/token-dashboard',  [TokenAnalyticsController::class,   'getPageData'])->name('ai-token-dashboard');
 });
 
