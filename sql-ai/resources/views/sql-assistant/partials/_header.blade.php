@@ -6,7 +6,7 @@
 
 <div class="flex justify-between items-center mb-8">
     <div>
-        <h1 class="text-4xl font-bold tracking-tight">SQL AI Voice Assistant</h1>
+        <h1 class="text-4xl font-bold tracking-tight">SQL AI Voice Assistant - Dev</h1>
         <p class="text-slate-500 dark:text-slate-400 mt-1">Speak, type, or upload audio to query your database</p>
     </div>
     <button onclick="toggleTheme()" id="themeToggle"

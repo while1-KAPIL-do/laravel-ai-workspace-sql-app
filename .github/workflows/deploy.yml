@@ -49,7 +49,11 @@ jobs:
             echo "📥 Pulling latest code..."
             git pull origin main
 
-            echo "🐳 Building & updating containers (NO DOWN)..."
+            echo "🗑️ Removing old app image to force fresh build..."
+            docker rmi sql_ai_app:latest || true   # forces Docker to rebuild from scratch
+            # docker rmi llm-service:latest || true  # llm-service rarely changes
+
+            echo "🐳 Building & updating containers..."
             docker compose --env-file .env -f docker-compose.prod.yml up -d --build
 
             echo "⏳ Waiting for MySQL..."
@@ -60,11 +64,17 @@ jobs:
             done
 
             echo "🧹 Clearing Laravel cache..."
-            docker exec sql_ai_app php artisan config:clear
-            docker exec sql_ai_app php artisan cache:clear
-            docker exec sql_ai_app php artisan route:clear
+            docker exec sql_ai_app php artisan optimize:clear
 
             echo "🚀 Running migrations..."
             docker exec sql_ai_app php artisan migrate --force
+
+            echo "⚡ Caching config & routes..."
+            docker exec sql_ai_app php artisan optimize
+
+            echo "🧹 Pruning ALL unused Docker resources..."
+            docker image prune -af   # ← -a removes ALL unused images, not just dangling
+            docker volume prune -f   # ← removes volumes not attached to any container
+            docker container prune -f
 
             echo "✅ Deployment completed!"
