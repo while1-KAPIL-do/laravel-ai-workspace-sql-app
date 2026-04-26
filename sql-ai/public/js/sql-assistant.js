@@ -279,7 +279,7 @@ function rebuildModelDropdowns() {
         ul.innerHTML = '';
 
         modelEntries.forEach(([modelId, meta]) => {
-            console.log(modelId, meta, meta.badge);
+            // console.log(modelId, meta, meta.badge);
             const badge      = (meta && meta.badge) ? meta.badge : '';
             const isSelected = modelId === activeModel;
             const li = document.createElement('li');
