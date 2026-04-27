@@ -44,6 +44,8 @@ services:
       dockerfile: Dockerfile
     container_name: sql_ai_app
     restart: always
+    ports:
+      - "127.0.0.1:8001:8000"
     depends_on:
       mysql_shared:
         condition: service_started
