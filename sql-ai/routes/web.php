@@ -6,10 +6,8 @@ use App\Http\Controllers\TokenAnalyticsController;
 use App\Http\Controllers\SchemaController;
 use Illuminate\Support\Facades\Route;
 
-// ── Welcome ───────────────────────────────────────────────────
-Route::get('/', function () {
-    return view('welcome');
-});
+// ── Redirection ───────────────────────────────────────────────────
+Route::redirect('/', '/ai/sql-assistant');
 
 // ── Health Check ───────────────────────────────────────────────────
 Route::get('/health', [HealthController::class, 'getHealth']);
