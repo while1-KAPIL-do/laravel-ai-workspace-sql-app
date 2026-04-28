@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\Token\TokenAnalyticsService;
+use App\Services\Token\TokenUsageService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TokenAnalyticsController extends Controller
@@ -77,5 +79,19 @@ class TokenAnalyticsController extends Controller
     public function costBreakdown()
     {
         return response()->json($this->service->costBreakdown(30));
+    }
+
+    public function getTokenStatus(Request $request): JsonResponse
+    {
+        $ip = $request->ip();
+
+        $usageService = new TokenUsageService();
+        $usedTokens = $usageService->getUsage($ip);
+
+        return response()->json([
+            'ip'           => $ip, 
+            'tokens_used'  => $usedTokens, 
+            'tokens_limit' => config('llm.tokens.daily_limit_per_ip')
+        ]);
     }
 }

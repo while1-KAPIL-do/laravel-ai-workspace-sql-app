@@ -106,7 +106,7 @@ class VoiceToSqlService
 
             // 6. Safety Check
             // Log::info('Step 6: Validating SQL safety');
-            // $this->validateSqlSafety($agentResponse['sql']); // Will inform user -> Query is unsafe if non SELECT Query come
+            // $this->validateSqlSafety($agentResponse['sql']); #TODO - Will inform user -> Query is unsafe if non SELECT Query come
 
 
             // 7. Cleanup
@@ -144,21 +144,6 @@ class VoiceToSqlService
     }
 
     // ====================== Private Methods (unchanged) ======================
-
-    private function uploadAudio(Request $request): string
-    {
-        $file = $request->hasFile('audio_file') 
-            ? $request->file('audio_file') 
-            : $request->file('audio');
-
-        return $file->store('voice-input/' . now()->format('Y-m-d'));
-    }
-
-    private function transcribeAudioFromDefault(string $path): string
-    {
-        $transcript = Transcription::fromStorage($path)->generate();
-        return trim((string) $transcript);
-    }
 
     public function generateSql(
         string $userQuestion,
@@ -199,6 +184,22 @@ class VoiceToSqlService
     }
 
     ////////////////////////////// CAN BE USE FULL IN FUTURE //////////////////////////////
+
+    // private function uploadAudio(Request $request): string
+    // {
+    //     $file = $request->hasFile('audio_file') 
+    //         ? $request->file('audio_file') 
+    //         : $request->file('audio');
+
+    //     return $file->store('voice-input/' . now()->format('Y-m-d'));
+    // }
+
+    // private function transcribeAudioFromDefault(string $path): string
+    // {
+    //     $transcript = Transcription::fromStorage($path)->generate();
+    //     return trim((string) $transcript);
+    // }
+
     // public function generateSql(
     //     string $userQuestion,
     //     string $provider = 'openai',

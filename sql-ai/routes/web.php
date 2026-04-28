@@ -35,4 +35,5 @@ Route::middleware(['throttle:web-general'])->prefix('analytics')->group(function
     Route::get('/cost',           [TokenAnalyticsController::class, 'cost']);
     Route::get('/cost-breakdown', [TokenAnalyticsController::class, 'costBreakdown']);
     Route::get('/filters',        [TokenAnalyticsController::class, 'filters']);
+    Route::get('/token-stats',     [TokenAnalyticsController::class,    'getTokenStatus']);
 });

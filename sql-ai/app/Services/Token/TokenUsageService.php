@@ -46,11 +46,9 @@ class TokenUsageService
     {
         $today = now()->toDateString();
 
-        $usage = \App\Models\TokenUsage::where('ip', $ip)
+        return \App\Models\TokenUsage::where('ip', $ip)
             ->where('date', $today)
-            ->first();
-
-        return $usage?->total_tokens ?? 0;
+            ->sum('total_tokens');
     }
 
     public function isExceeded(string $ip): bool

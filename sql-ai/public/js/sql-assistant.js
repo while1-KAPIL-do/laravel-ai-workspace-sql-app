@@ -22,6 +22,43 @@ window.toggleTheme = function () {
     }
 };
 
+async function refreshTokenStats(){
+    try {
+        const res = await fetch('/analytics/token-stats', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        });
+
+        if (!res.ok) throw new Error('Failed: ' + res.status);
+
+        const data = await res.json();
+        console.log('Header stats data:', data);
+
+        const ipEl = document.getElementById('userIpLabel');
+        if (ipEl && data.ip) ipEl.textContent = data.ip;
+
+        const tokenEl = document.getElementById('tokenUsageLabel');
+        if (tokenEl && data.tokens_used !== undefined) {
+            tokenEl.textContent = `${Number(data.tokens_used).toLocaleString()} / ${Number(data.tokens_limit).toLocaleString()}`;
+            if (data.tokens_used / data.tokens_limit > 0.8) {
+                tokenEl.classList.add('text-rose-500');
+                tokenEl.classList.remove('text-slate-600');
+            }
+        }
+
+    } catch (err) {
+        console.error('Header stats error:', err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async function () {
+    refreshTokenStats();
+});
+
+
 (function () {
     const saved = localStorage.getItem('theme');
     if (saved === 'light') {
