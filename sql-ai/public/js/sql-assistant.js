@@ -31,6 +31,26 @@ window.toggleTheme = function () {
     }
 })();
 
+function setupPanelInput(panelId, inputSelector, buttonId) {
+    const input = document.querySelector(inputSelector);
+    const button = document.getElementById(buttonId);
+
+    if (!input || !button) return;
+
+    function toggle() {
+        const hasValue = input.value.trim().length > 0;
+        button.disabled = !hasValue;
+    }
+
+    toggle();
+    input.addEventListener('input', toggle);
+}
+
+// Init all panels
+document.addEventListener('DOMContentLoaded', function () {
+    setupPanelInput('text', '#queryText', 'submitBtn');
+});
+
 
 // ── Mode switcher ─────────────────────────────────────────────
 let currentMode = 'text';

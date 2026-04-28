@@ -17,7 +17,8 @@ use Exception;
 class VoiceToSqlService
 {
     public function __construct(
-        protected TokenManager $tokenManager
+        protected TokenManager $tokenManager,
+        protected SchemaService $schemaService
     ) {}
 
     public function handle(Request $request): JsonResponse
@@ -32,6 +33,13 @@ class VoiceToSqlService
         
 
         try {
+            
+            $sessionId = session()->getId();
+            $activeSchema = $this->schemaService->getActiveSchema($sessionId);
+            if (empty($activeSchema)) {
+                throw new \Exception('Schema Not found! Please Add Database Schema for SQL Generation');
+            }
+            
             // 1. Fetch model
             Log::info('Step 1: Fetch model');
             $provider = LlmConfig::resolveProvider($request->input('provider'));

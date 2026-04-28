@@ -16,8 +16,8 @@
                 <i class="fas fa-circle-exclamation text-red-500 text-sm"></i>
             </div>
             <div>
-                <p class="text-sm font-semibold leading-none">Something went wrong</p>
-                <p class="text-xs text-slate-400 mt-1">The AI could not process your request</p>
+                <p class="text-sm font-semibold leading-none">The AI could not process your request - </p>
+                <!-- <p class="text-xs text-slate-400 mt-1">The AI could not process your request</p> -->
             </div>
         </div>
 

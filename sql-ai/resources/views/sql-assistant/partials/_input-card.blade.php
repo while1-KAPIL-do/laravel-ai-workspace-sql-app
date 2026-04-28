@@ -68,6 +68,7 @@
                 'panel'      => 'text',
                 'submitId'   => 'submitBtn',
                 'borderTop'  => true,
+                'submitDisabled'    => true
             ])
         </div>
 
