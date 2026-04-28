@@ -11,7 +11,7 @@ use Illuminate\Support\ServiceProvider;
 class RateLimiterServiceProvider extends ServiceProvider
 {
     const RATE_LIMIT_ON_WEB_OPERATIONS      = 100; 
-    const RATE_LIMIT_ON_AI_OPERATIONS       = 10;
+    const RATE_LIMIT_ON_AI_OPERATIONS       = 20;
     const RATE_LIMIT_ON_SCHEMA_OPERATIONS   = 5;
 
     const RATE_LIMIT_ON_LOCAL_DEV = 10000;

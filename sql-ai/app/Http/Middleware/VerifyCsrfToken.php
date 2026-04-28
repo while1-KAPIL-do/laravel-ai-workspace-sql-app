@@ -29,7 +29,7 @@ class VerifyCsrfToken extends Middleware
                 'violations' => $hits,
             ]);
 
-            if ($hits >= 5) {
+            if ($hits >= 10) {
                 BlockedIp::block($ip, 'Auto-blocked: CSRF abuse', 'system', 1440);
                 Cache::forget("ip_blocked:{$ip}");
                 Log::critical('IP auto-blocked: CSRF abuse', ['ip' => $ip]);
@@ -60,7 +60,7 @@ class VerifyCsrfToken extends Middleware
                 'violations' => $hits,
             ]);
 
-            if ($hits >= 5) {
+            if ($hits >= 10) {
                 BlockedIp::block($ip, 'Auto-blocked: CSRF abuse', 'system', 1440);
                 Cache::forget("ip_blocked:{$ip}");
                 Log::critical('IP auto-blocked: CSRF abuse', ['ip' => $ip]);

@@ -44,9 +44,9 @@ class DeviceFingerprintMiddleware
                 'violations'          => $hits,
             ]);
 
-            // Auto-block after 3 mismatches — stronger threshold than CSRF
+            // Auto-block after 5 mismatches — stronger threshold than CSRF
             // because legitimate users almost never trigger this
-            if ($hits >= 3) {
+            if ($hits >= 5) {
                 BlockedIp::block($ip, 'Auto-blocked: device fingerprint mismatch', 'system', 720);
                 Cache::forget("ip_blocked:{$ip}");
                 Log::critical('IP auto-blocked: fingerprint mismatch', ['ip' => $ip]);
