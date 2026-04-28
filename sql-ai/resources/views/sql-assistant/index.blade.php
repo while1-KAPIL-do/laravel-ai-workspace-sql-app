@@ -41,6 +41,36 @@
 
         <p class="mt-8 text-center text-slate-500 dark:text-slate-500 text-xs">
             Powered by AI · Results are auto-generated and may need review
+            </br>
+            {{-- LinkedIn Button --}}
+            <a href="https://www.linkedin.com/in/kapil-a-17295a147" target="_blank" title="Connect on LinkedIn"
+                class="group transition-all">
+                <i class="fab fa-linkedin-in 
+                    text-slate-400 dark:text-slate-500 
+                    group-hover:text-blue-600 dark:group-hover:text-blue-400 
+                    text-base transition-colors">
+                </i>
+            </a>
+            | 
+            {{-- WhatsApp Contact Button --}}
+            <a href="https://wa.me/9177720223764" target="_blank" title="Contact on WhatsApp"
+                class="group transition-all">
+                <i class="fab fa-whatsapp 
+                    text-slate-400 dark:text-slate-500 
+                    group-hover:text-green-500 dark:group-hover:text-green-400 
+                    text-base transition-colors">
+                </i>
+            </a>
+            |
+            {{-- Share Button --}}
+            <button onclick="shareUrl()" title="Share this page"
+                class="group transition-all">
+                <i class="fas fa-share-nodes 
+                    text-slate-400 dark:text-slate-500 
+                    group-hover:text-blue-500 dark:group-hover:text-blue-400 
+                    text-sm transition-colors">
+                </i>
+            </button>
         </p>
 
     </div>

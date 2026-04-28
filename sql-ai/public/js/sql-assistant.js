@@ -56,6 +56,7 @@ async function refreshTokenStats(){
 
 document.addEventListener('DOMContentLoaded', async function () {
     refreshTokenStats();
+    loadSchema();
 });
 
 
@@ -87,6 +88,40 @@ function setupPanelInput(panelId, inputSelector, buttonId) {
 document.addEventListener('DOMContentLoaded', function () {
     setupPanelInput('text', '#queryText', 'submitBtn');
 });
+
+function shareUrl() {
+    const url = window.location.href;
+
+    if (navigator.share) {
+        // Native share sheet (mobile)
+        navigator.share({
+            title: 'SQL AI Voice Assistant',
+            text: 'Check out this SQL AI Voice Assistant!',
+            url: url,
+        }).catch(() => {});
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(url).then(() => {
+            showShareToast();
+        }).catch(() => {
+            prompt('Copy this link:', url);
+        });
+    }
+}
+
+function showShareToast() {
+    // Remove existing toast if any
+    const existing = document.getElementById('shareToast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'shareToast';
+    toast.className = 'fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 bg-slate-800 dark:bg-slate-700 text-white text-sm rounded-xl shadow-lg border border-slate-600';
+    toast.innerHTML = '<i class="fas fa-check-circle text-green-400"></i> Link copied to clipboard!';
+    document.body.appendChild(toast);
+
+    setTimeout(() => toast.remove(), 3000);
+}
 
 
 // ── Mode switcher ─────────────────────────────────────────────
@@ -124,8 +159,12 @@ async function loadSchema() {
         const data = await res.json();
         schemaData = data;
         document.getElementById('schemaLoading').classList.add('hidden');
+
+        if (data.length && !schemaOpen) openSchema();
+
         const badge = document.getElementById('tableCountBadge');
-        badge.textContent = `${data.length} tables`;
+        const count = Array.isArray(data) ? data.length : 0;
+        badge.textContent = count === 0 ? 'No tables' : `${count} tables`;
         badge.classList.remove('hidden');
         renderTableChips(data);
         schemaLoaded = true;
@@ -134,6 +173,13 @@ async function loadSchema() {
         document.getElementById('schemaLoading').classList.add('hidden');
         document.getElementById('schemaError').classList.remove('hidden');
     }
+}
+
+function openSchema() {
+    schemaOpen = true;
+    document.getElementById('schemaBody').classList.add('open');
+    document.getElementById('schemaChevron').classList.add('open');
+    document.getElementById('schemaSubtitle').textContent = 'Click to collapse';
 }
 
 function renderTableChips(tables) {
