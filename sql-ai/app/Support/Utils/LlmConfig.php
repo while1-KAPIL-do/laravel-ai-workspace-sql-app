@@ -102,7 +102,8 @@ class LlmConfig
     // Get tier
     public static function tier(string $provider, string $model): ?string
     {
-        $tier = config(self::$configKey . ".$provider.$model.tier");
+        $models = config(self::$configKey . ".$provider");
+        $tier = $models[$model]['tier'];
 
         Log::debug('LlmConfig: tier()', [
             'provider' => $provider,
@@ -156,7 +157,7 @@ class LlmConfig
     {
         $tier = self::tier($provider, $model);
 
-        $restricted = in_array($tier, ['premium']);
+        $restricted = in_array($tier, ['premium', 'balanced']);
 
         Log::info('LlmConfig: isRestricted()', [
             'provider' => $provider,

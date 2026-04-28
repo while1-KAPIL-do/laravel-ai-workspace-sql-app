@@ -103,11 +103,25 @@ class TokenAnalyticsService
         ];
     }
 
+    // public function getFilters()
+    // {
+    //     return [
+    //         'providers' => TokenUsage::distinct()->pluck('provider'),
+    //         'models'    => TokenUsage::distinct()->pluck('model'),
+    //     ];
+    // }
+
     public function getFilters()
     {
+        $models = TokenUsage::distinct()
+            ->select('provider', 'model')
+            ->get()
+            ->groupBy('provider')
+            ->map(fn($rows) => $rows->pluck('model')->unique()->values());
+
         return [
             'providers' => TokenUsage::distinct()->pluck('provider'),
-            'models'    => TokenUsage::distinct()->pluck('model'),
+            'models'    => $models,
         ];
     }
 

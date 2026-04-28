@@ -101,11 +101,9 @@ function setProvider(provider) {
         }
     });
     
-    // Fetch models dynamically from API response
     let models = [];
-
     if (provider !== 'all' && filtersData.models) {
-        models = filtersData.models || [];
+        models = filtersData.models[provider] || [];
     }
 
     renderModelFilter(models);
