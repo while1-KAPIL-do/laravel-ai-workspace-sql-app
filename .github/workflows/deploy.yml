@@ -70,7 +70,7 @@ jobs:
             docker exec sql_ai_app php artisan migrate --force
 
             echo "⚡ Caching config & routes..."
-            docker exec sql_ai_app php artisan optimize
+            docker exec sql_ai_app php artisan optimize:clear
 
             echo "🧹 Pruning ALL unused Docker resources..."
             docker image prune -af   # ← -a removes ALL unused images, not just dangling
