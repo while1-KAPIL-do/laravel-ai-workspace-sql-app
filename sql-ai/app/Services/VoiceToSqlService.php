@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Ai\Agents\MySqlExpert;
+use App\Ai\Runners\SqlAgentRunner;
 use App\Services\Token\TokenManager;
 use App\Services\Transcription\WhisperClient;
 use App\Support\Utils\LlmConfig;
@@ -160,77 +160,115 @@ class VoiceToSqlService
         return trim((string) $transcript);
     }
 
-    
     public function generateSql(
         string $userQuestion,
         string $provider = 'openai',
         string $model    = 'gpt-4o-mini'
     ): array {
-        $agent       = new MySqlExpert();
-        $totalInput  = 0;
-        $totalOutput = 0;
-        $attempts    = 0;
-        $lastSql     = '';
-        $lastErrors  = [];
-
-        $question = $userQuestion;
-
-        for ($attempt = 1; $attempt <= 3; $attempt++) {
-            $attempts++;
-
-            // On retries, append the validation errors so the agent self-corrects
-            $prompt = $attempt === 1
-                ? $question
-                : $question . "\n\n[CORRECTION REQUIRED] Your previous SQL had these errors:\n"
-                  . implode("\n", array_map(fn($e) => "- {$e}", $lastErrors))
-                  . "\nFix only those errors. Return only the corrected SQL.";
-
-            $response = $agent->prompt($prompt, [], $provider, $model);
-
-            $sql          = trim((string) $response);
-            $inputTokens  = $response?->usage?->promptTokens    ?? 0;
-            $outputTokens = $response?->usage?->completionTokens ?? 0;
-
-            $totalInput  += $inputTokens;
-            $totalOutput += $outputTokens;
-
-            // Validate the SQL against the real schema
-            $errors = $agent->validateOutput($sql);
-
-            if (empty($errors)) {
-                // Good SQL — return it
-                return [
-                    'instructions' => $agent->instructions(),
-                    'question' => $userQuestion,
-                    'sql'      => $sql,
-                    'attempts' => $attempts,
-                    'tokens'   => [
-                        'input'  => $totalInput,
-                        'output' => $totalOutput,
-                        'total'  => $totalInput + $totalOutput,
-                    ],
-                ];
-            }
-
-            // Not valid yet — store for next retry prompt
-            $lastSql    = $sql;
-            $lastErrors = $errors;
-        }
-
-        // Exhausted retries — return best attempt with error flag
-        return [
-            'instructions' => $agent->instructions(),
-            'question'        => $userQuestion,
-            'sql'             => $lastSql,
-            'attempts'        => $attempts,
-            'validation_errors' => $lastErrors,
-            'tokens'          => [
-                'input'  => $totalInput,
-                'output' => $totalOutput,
-                'total'  => $totalInput + $totalOutput,
-            ],
-        ];
+        return (new SqlAgentRunner())->run($userQuestion, $provider, $model);
     }
+    
+    private function cleanupAudio(?string $path): void
+    {
+        if ($path && Storage::exists($path)) {
+            Storage::delete($path);
+        }
+    }
+
+    private function successResponse(string $userQuestion, string $sql): JsonResponse
+    {
+        return response()->json([
+            'success'         => true,
+            'user_question'   => $userQuestion,
+            'generated_sql'   => $sql,
+            'row_count'       => 0,
+            'results_preview' => 1,
+            'spoken_summary'  => "Here are the results for: {$userQuestion}",
+        ]);
+    }
+
+    private function errorResponse(Exception $e, ?string $userQuestion = null, ?string $sql = null): JsonResponse
+    {
+        return response()->json([
+            'success'        => false,
+            'user_question'  => $userQuestion,
+            'generated_sql'  => $sql,
+            'error'          => $e->getMessage(),
+            'spoken_summary' => "Sorry, something went wrong: " . $e->getMessage(),
+        ], 422);
+    }
+
+    ////////////////////////////// CAN BE USE FULL IN FUTURE //////////////////////////////
+    // public function generateSql(
+    //     string $userQuestion,
+    //     string $provider = 'openai',
+    //     string $model    = 'gpt-4o-mini'
+    // ): array {
+    //     $agent       = new MySqlExpert();
+    //     $totalInput  = 0;
+    //     $totalOutput = 0;
+    //     $attempts    = 0;
+    //     $lastSql     = '';
+    //     $lastErrors  = [];
+
+    //     $question = $userQuestion;
+
+    //     for ($attempt = 1; $attempt <= 3; $attempt++) {
+    //         $attempts++;
+
+    //         // On retries, append the validation errors so the agent self-corrects
+    //         $prompt = $attempt === 1
+    //             ? $question
+    //             : $question . "\n\n[CORRECTION REQUIRED] Your previous SQL had these errors:\n"
+    //               . implode("\n", array_map(fn($e) => "- {$e}", $lastErrors))
+    //               . "\nFix only those errors. Return only the corrected SQL.";
+
+    //         $response = $agent->prompt($prompt, [], $provider, $model);
+
+    //         $sql          = trim((string) $response);
+    //         $inputTokens  = $response?->usage?->promptTokens    ?? 0;
+    //         $outputTokens = $response?->usage?->completionTokens ?? 0;
+
+    //         $totalInput  += $inputTokens;
+    //         $totalOutput += $outputTokens;
+
+    //         // Validate the SQL against the real schema
+    //         $errors = $agent->validateOutput($sql);
+
+    //         if (empty($errors)) {
+    //             // Good SQL — return it
+    //             return [
+    //                 'instructions' => $agent->instructions(),
+    //                 'question' => $userQuestion,
+    //                 'sql'      => $sql,
+    //                 'attempts' => $attempts,
+    //                 'tokens'   => [
+    //                     'input'  => $totalInput,
+    //                     'output' => $totalOutput,
+    //                     'total'  => $totalInput + $totalOutput,
+    //                 ],
+    //             ];
+    //         }
+
+    //         // Not valid yet — store for next retry prompt
+    //         $lastSql    = $sql;
+    //         $lastErrors = $errors;
+    //     }
+
+    //     // Exhausted retries — return best attempt with error flag
+    //     return [
+    //         'instructions' => $agent->instructions(),
+    //         'question'        => $userQuestion,
+    //         'sql'             => $lastSql,
+    //         'attempts'        => $attempts,
+    //         'validation_errors' => $lastErrors,
+    //         'tokens'          => [
+    //             'input'  => $totalInput,
+    //             'output' => $totalOutput,
+    //             'total'  => $totalInput + $totalOutput,
+    //         ],
+    //     ];
+    // }
 
     // will need below in futute for token calculations
     // private function generateSql(string $userQuestion)
@@ -263,49 +301,20 @@ class VoiceToSqlService
     //     return $response;
     // }
 
-    private function validateSqlSafety(string $sql): void
-    {
-        $upper = strtoupper($sql);
-        $dangerous = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'TRUNCATE', 'ALTER', 'CREATE'];
+    // private function validateSqlSafety(string $sql): void
+    // {
+    //     $upper = strtoupper($sql);
+    //     $dangerous = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'TRUNCATE', 'ALTER', 'CREATE'];
 
-        foreach ($dangerous as $word) {
-            if (str_contains($upper, $word . ' ')) {
-                throw new Exception("Unsafe SQL operation: {$word}");
-            }
-        }
+    //     foreach ($dangerous as $word) {
+    //         if (str_contains($upper, $word . ' ')) {
+    //             throw new Exception("Unsafe SQL operation: {$word}");
+    //         }
+    //     }
 
-        if (!str_starts_with($upper, 'SELECT ')) {
-            throw new Exception("Only SELECT queries are allowed.");
-        }
-    }
+    //     if (!str_starts_with($upper, 'SELECT ')) {
+    //         throw new Exception("Only SELECT queries are allowed.");
+    //     }
+    // }
 
-    private function cleanupAudio(?string $path): void
-    {
-        if ($path && Storage::exists($path)) {
-            Storage::delete($path);
-        }
-    }
-
-    private function successResponse(string $userQuestion, string $sql): JsonResponse
-    {
-        return response()->json([
-            'success'         => true,
-            'user_question'   => $userQuestion,
-            'generated_sql'   => $sql,
-            'row_count'       => 0,
-            'results_preview' => 1,
-            'spoken_summary'  => "Here are the results for: {$userQuestion}",
-        ]);
-    }
-
-    private function errorResponse(Exception $e, ?string $userQuestion = null, ?string $sql = null): JsonResponse
-    {
-        return response()->json([
-            'success'        => false,
-            'user_question'  => $userQuestion,
-            'generated_sql'  => $sql,
-            'error'          => $e->getMessage(),
-            'spoken_summary' => "Sorry, something went wrong: " . $e->getMessage(),
-        ], 422);
-    }
 }
