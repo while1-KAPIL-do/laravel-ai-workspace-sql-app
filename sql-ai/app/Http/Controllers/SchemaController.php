@@ -14,9 +14,18 @@ class SchemaController extends Controller
 
     public function uploadSchema(Request $request)
     {
-        $request->validate([
-            'schema' => 'required|file|mimes:sql,txt|max:5120',
-        ]);
+
+        $request->validate(
+            [
+                'schema' => 'required|file|mimes:sql,txt|max:2048',
+            ],
+            [
+                'schema.required' => 'Please upload a schema file.',
+                'schema.file'     => 'Uploaded item must be a valid file.',
+                'schema.mimes'    => 'Only .sql or .txt files are allowed.',
+                'schema.max'      => 'File size must not exceed 2MB.',
+            ]
+        );
 
         try {
             return $this->service->uploadSchema($request);
