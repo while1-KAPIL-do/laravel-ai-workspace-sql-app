@@ -2,6 +2,7 @@
 
 namespace App\Services\Token;
 
+use App\Support\Utils\LlmConfig;
 use Illuminate\Support\Facades\Log;
 
 class TokenManager
@@ -60,8 +61,7 @@ class TokenManager
     ): void {
 
         // Get pricing safely
-        $pricing = config("llm_pricing.$provider.$model.pricing")
-            ?? config("llm_pricing.default.pricing");
+        $pricing = LlmConfig::pricing($provider, $model);
 
         $inputCostPer1k = $pricing['input'] ?? 0;
         $outputCostPer1k = $pricing['output'] ?? 0;
