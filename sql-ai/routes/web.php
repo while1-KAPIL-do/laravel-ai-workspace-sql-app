@@ -7,7 +7,14 @@ use App\Http\Controllers\SchemaController;
 use Illuminate\Support\Facades\Route;
 
 // ── Redirection ───────────────────────────────────────────────────
-Route::redirect('/', '/ai/sql-assistant');
+// Route::redirect('/', '/ai/sql-assistant');
+
+// ── Portfolio Homepage ───────────────────────────────────────────────────
+Route::get('/', function () {
+    // return view('portfolio.p1');
+    return view('home');
+})->name('home');
+
 
 // ── Health Check ───────────────────────────────────────────────────
 Route::get('/health', [HealthController::class, 'getHealth']);
