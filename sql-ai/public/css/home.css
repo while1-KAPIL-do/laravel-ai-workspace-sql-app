@@ -738,3 +738,25 @@ footer {
     .stat-n { font-size: 30px; }
     .skills-wrap { grid-template-columns: 1fr 1fr; }
 }
+
+/* VIDEO */
+.vid-wrap { position:relative; overflow:hidden; height:460px; border-bottom:1px solid var(--line); }
+.vid-wrap video { width:100%; height:100%; object-fit:cover; opacity:0.75; }
+.vid-overlay {
+    position:absolute; inset:0;
+    background:linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.3) 50%, transparent 100%);
+    display:flex; flex-direction:column; justify-content:flex-end;
+    padding:0 var(--sec-x) 48px;
+}
+.vid-text {
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(28px,4.5vw,58px);
+    font-weight:700; color:#fff;
+    letter-spacing:-2px; line-height:1.05; margin-top:10px;
+}
+.vid-text em { font-style:normal; color:var(--muted); }
+
+@media(max-width:768px){
+    .vid-wrap { height:260px; }
+    .vid-overlay { padding:0 20px 28px; }
+}
