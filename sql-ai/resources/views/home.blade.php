@@ -216,6 +216,22 @@
         </div>
     </section>
 
+    {{-- VIDEO — WORKSPACE --}}
+    <div class="vid-wrap">
+        <video autoplay muted loop playsinline preload="auto">
+            <source src="https://juanmora.co/videos-work/desk_jm3.mp4" type="video/mp4">
+        </video>
+
+        <div class="vid-overlay">
+            <span class="sec-num mono">// SYSTEMS ONLINE</span>
+            <p class="vid-text">
+                While the world sleeps,<br>
+                <em>we build.</em>
+            </p>
+        </div>
+    </div>
+
+
     {{-- AI TOOLS --}}
     <section class="ai-sec" id="ai-tools">
         <div class="ai-inner">
