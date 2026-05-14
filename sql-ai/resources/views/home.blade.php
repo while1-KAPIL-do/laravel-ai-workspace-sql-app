@@ -279,7 +279,7 @@
             </div>
             <div class="ai-r fade-up">
 
-                <a href="/ai/sql-assistant" class="ai-card">
+                <a href="/ai/token-dashboard" class="ai-card">
                     <div>
                         <div class="ai-card-name">LLM Token Dashboard</div>
                         <div class="ai-card-desc mono">Real-time multi-provider cost tracking</div>
@@ -288,7 +288,7 @@
                     <span class="live-dot"></span>
                 </a>
 
-                <a href="/ai/token-dashboard" class="ai-card">
+                <a href="/ai/sql-assistant" class="ai-card">
                     <div>
                         <div class="ai-card-name">SQL Voice Assistant</div>
                         <div class="ai-card-desc mono">Voice -> natural language -> SQL queries</div>
@@ -400,9 +400,9 @@
                 <div class="footer-label mono">// want to build something together?</div>
                 <a href="mailto:kapillabs.work@gmail.com" class="footer-email">kapillabs.work@gmail.com</a>
                 <div class="footer-socials">
-                    <a href="https://github.com/while1-KAPIL-do" target="_blank" rel="noopener" class="mono">GitHub ↗</a>
-                    <a href="https://www.linkedin.com/in/kapil-a-17295a147" target="_blank" rel="noopener" class="mono">LinkedIn ↗</a>
-                    <a href="mailto:kapillabs.work@gmail.com" class="mono">Email ↗</a>
+                    <a href="https://github.com/while1-KAPIL-do" target="_blank" rel="noopener" class="mono">GH ↗</a>
+                    <a href="https://www.linkedin.com/in/kapil-a-17295a147" target="_blank" rel="noopener" class="mono">LI ↗</a>
+                    <a href="mailto:kapillabs.work@gmail.com" class="mono">EM ↗</a>
                 </div>
             </div>
             <div class="footer-nr">LABS</div>
@@ -412,11 +412,11 @@
             <!-- <div class="footer-stack-tags">
                 <span class="mono">Laravel</span><span class="mono">Blade</span><span class="mono">Space Grotesk</span>
             </div> -->
-            <div class="footer-links">
+            <!-- <div class="footer-links">
                 <a href="https://github.com/while1-KAPIL-do" target="_blank" class="mono">GH</a>
                 <a href="https://www.linkedin.com/in/kapil-a-17295a147" target="_blank" class="mono">LI</a>
                 <a href="mailto:kapillabs.work@gmail.com" class="mono">EM</a>
-            </div>
+            </div> -->
         </div>
     </footer>
 
